@@ -1,0 +1,4974 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Babble API",
+    "version": "1.0.0",
+    "description": "Babble API — 발음 연습 서비스"
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "errorKey": {
+            "type": "string"
+          }
+        }
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {}
+          },
+          "total": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          }
+        }
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "USER",
+          "ADMIN"
+        ]
+      },
+      "AssessmentStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "ANALYZING",
+          "COMPLETED",
+          "FAILED",
+          "MAX_RETRY_EXCEEDED"
+        ]
+      },
+      "ScriptDifficulty": {
+        "type": "string",
+        "enum": [
+          "EASY",
+          "MEDIUM",
+          "HARD"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "isVerified": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "weeklyGoal": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Assessment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "userId": {
+            "type": "integer"
+          },
+          "audioUrl": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "scriptText": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcribedText": {
+            "type": "string",
+            "nullable": true
+          },
+          "scriptId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/AssessmentStatus"
+          },
+          "retryCount": {
+            "type": "integer"
+          },
+          "score": {
+            "type": "number",
+            "nullable": true
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true
+          },
+          "speakingRate": {
+            "type": "number",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AssessmentResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "audioUrl",
+          "duration",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "userId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "audioUrl": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "scriptId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "transcribedText": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "ANALYZING",
+              "COMPLETED",
+              "FAILED",
+              "MAX_RETRY_EXCEEDED"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "nullable": true
+          },
+          "feedback": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "similarity": {
+                "type": "number"
+              },
+              "alignment": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "fa_score": {
+                "type": "number"
+              },
+              "phoneme_accuracy": {
+                "type": "number"
+              }
+            }
+          },
+          "pitchData": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "object",
+              "properties": {
+                "t": {
+                  "type": "number"
+                },
+                "f0": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "speakingRate": {
+            "type": "number",
+            "nullable": true
+          },
+          "scriptSnapshot": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "difficulty": {
+                "type": "string"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AssessmentSummaryDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "audioUrl",
+          "duration",
+          "status",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "userId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "audioUrl": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "scriptId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "ANALYZING",
+              "COMPLETED",
+              "FAILED",
+              "MAX_RETRY_EXCEEDED"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "nullable": true
+          },
+          "speakingRate": {
+            "type": "number",
+            "nullable": true
+          },
+          "scriptSnapshot": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "difficulty": {
+                "type": "string"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AssessmentUploadDto": {
+        "type": "object",
+        "properties": {
+          "scriptId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "연습할 스크립트 ID (자유 발화 시 생략 가능)"
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "소요 시간 (초)"
+          }
+        }
+      },
+      "RegisterResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "firstName"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "firstName": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginUserDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "USER",
+              "ADMIN"
+            ]
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "errorKey": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterDto": {
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "firstName",
+          "agreedToTerms"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "agreedToTerms": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LoginDto": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          },
+          "strategy": {
+            "type": "string",
+            "default": "email"
+          }
+        }
+      },
+      "VerifyEmailDto": {
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 6
+          }
+        }
+      },
+      "RequestPasswordResetDto": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "required": [
+          "email",
+          "code",
+          "newPassword"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 6
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8
+          }
+        }
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "모바일 클라이언트용. 브라우저는 HttpOnly 쿠키 사용"
+          }
+        }
+      },
+      "ResendCodeDto": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "CheckEmailDto": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "GuestTokenDto": {
+        "type": "object",
+        "required": [
+          "deviceId",
+          "serviceConsentVersion"
+        ],
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "description": "클라이언트 UUID"
+          },
+          "serviceConsentVersion": {
+            "type": "string",
+            "description": "1단계 서비스 동의 약관 버전"
+          }
+        }
+      },
+      "VoiceConsentDto": {
+        "type": "object",
+        "required": [
+          "voiceConsentVersion"
+        ],
+        "properties": {
+          "voiceConsentVersion": {
+            "type": "string",
+            "description": "2단계 음성 동의 약관 버전"
+          }
+        }
+      },
+      "GuestUpgradeDto": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          }
+        }
+      },
+      "MergeGuestDto": {
+        "type": "object",
+        "required": [
+          "guestUserId"
+        ],
+        "properties": {
+          "guestUserId": {
+            "type": "integer",
+            "description": "병합할 게스트 User ID"
+          }
+        }
+      },
+      "ChallengeDetailResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "challengeDate",
+          "status",
+          "participantCount",
+          "scripts"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "challengeDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "COMPLETED"
+            ]
+          },
+          "participantCount": {
+            "type": "integer"
+          },
+          "scripts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChallengeScriptDto"
+            }
+          },
+          "myParticipation": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChallengeParticipationDto"
+              }
+            ]
+          }
+        }
+      },
+      "ChallengeScriptDto": {
+        "type": "object",
+        "required": [
+          "scriptId",
+          "title",
+          "content",
+          "difficulty"
+        ],
+        "properties": {
+          "scriptId": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "string"
+          }
+        }
+      },
+      "ChallengeParticipationDto": {
+        "type": "object",
+        "required": [
+          "compositeScore",
+          "correctCount",
+          "totalCount",
+          "duration",
+          "comboMaxStreak"
+        ],
+        "properties": {
+          "compositeScore": {
+            "type": "integer"
+          },
+          "correctCount": {
+            "type": "integer"
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "comboMaxStreak": {
+            "type": "integer"
+          },
+          "finalRank": {
+            "type": "integer",
+            "nullable": true
+          },
+          "rewardXp": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "ChallengeLeaderboardEntryDto": {
+        "type": "object",
+        "required": [
+          "rank",
+          "userId",
+          "firstName",
+          "compositeScore",
+          "correctCount",
+          "totalCount",
+          "duration",
+          "comboMaxStreak"
+        ],
+        "properties": {
+          "rank": {
+            "type": "integer"
+          },
+          "userId": {
+            "type": "integer"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "compositeScore": {
+            "type": "integer"
+          },
+          "correctCount": {
+            "type": "integer"
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "comboMaxStreak": {
+            "type": "integer"
+          }
+        }
+      },
+      "CreateGameSessionDto": {
+        "type": "object",
+        "required": [
+          "gameType",
+          "difficulty",
+          "correctCount",
+          "totalCount",
+          "duration",
+          "score"
+        ],
+        "properties": {
+          "gameType": {
+            "type": "string",
+            "enum": [
+              "WORD_MATCH",
+              "PRONUNCIATION_QUIZ",
+              "SPEED_READ"
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "correctCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "소요 시간 (초)"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "comboMaxStreak": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "최대 콤보 연속 정답 수"
+          },
+          "wordResults": {
+            "type": "array",
+            "description": "단어별 결과 (v2 XP 차등 지급용)",
+            "items": {
+              "$ref": "#/components/schemas/WordResultDto"
+            }
+          }
+        }
+      },
+      "GameSessionResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "userId",
+          "gameType",
+          "difficulty",
+          "correctCount",
+          "totalCount",
+          "duration",
+          "score",
+          "comboMaxStreak",
+          "accuracy",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "userId": {
+            "type": "integer"
+          },
+          "gameType": {
+            "type": "string",
+            "enum": [
+              "WORD_MATCH",
+              "PRONUNCIATION_QUIZ",
+              "SPEED_READ"
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "correctCount": {
+            "type": "integer"
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "score": {
+            "type": "integer"
+          },
+          "comboMaxStreak": {
+            "type": "integer"
+          },
+          "accuracy": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "xpBreakdown": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "SubmitChallengeParticipationDto": {
+        "type": "object",
+        "required": [
+          "correctCount",
+          "totalCount",
+          "duration"
+        ],
+        "properties": {
+          "gameSessionId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "연동된 게임 세션 ID"
+          },
+          "correctCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "소요 시간 (초)"
+          },
+          "comboMaxStreak": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "최대 콤보 연속 정답 수"
+          }
+        }
+      },
+      "WordResultDto": {
+        "type": "object",
+        "required": [
+          "scriptId",
+          "word",
+          "wordIndex",
+          "isCorrect",
+          "attempts",
+          "hintUsed"
+        ],
+        "properties": {
+          "scriptId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "word": {
+            "type": "string",
+            "minLength": 1
+          },
+          "wordIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "isCorrect": {
+            "type": "boolean"
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "hintUsed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BadgeResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "title",
+          "description",
+          "iconName",
+          "category",
+          "isUnlocked"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "iconName": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "isUnlocked": {
+            "type": "boolean"
+          },
+          "unlockedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateGameConfigDto": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "description": "설정 값 (타입 무관 — 숫자, 객체, 배열, boolean 등)"
+          },
+          "description": {
+            "type": "string",
+            "description": "관리자용 설명 (선택)"
+          }
+        }
+      },
+      "ChapterResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "orderIndex",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderIndex": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateChapterDto": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "UpdateChapterDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ScriptResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "content",
+          "category",
+          "difficulty",
+          "articulationPlace",
+          "isActive",
+          "orderIndex",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "articulationPlace": {
+            "type": "string"
+          },
+          "targetConsonants": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "chapterId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "orderIndex": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateScriptDto": {
+        "type": "object",
+        "required": [
+          "title",
+          "content"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "articulationPlace": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "chapterId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "orderIndex": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "UpdateScriptDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "articulationPlace": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "chapterId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "orderIndex": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "AdminUpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "USER",
+              "ADMIN"
+            ]
+          },
+          "weeklyGoal": {
+            "type": "number",
+            "minimum": 1
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 8
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8
+          }
+        }
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 2
+          },
+          "lastName": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateWeeklyGoalDto": {
+        "type": "object",
+        "required": [
+          "weeklyGoal"
+        ],
+        "properties": {
+          "weeklyGoal": {
+            "type": "number",
+            "minimum": 1,
+            "description": "주간 학습 목표 횟수"
+          }
+        }
+      },
+      "UserStatsResponseDto": {
+        "type": "object",
+        "required": [
+          "userId",
+          "totalLessons",
+          "completedLessons",
+          "todayCompleted",
+          "weeklyGoal",
+          "averageScore",
+          "currentStreak",
+          "longestStreak",
+          "totalPracticeTime",
+          "weeklyActivity",
+          "dailyGoal"
+        ],
+        "properties": {
+          "userId": {
+            "type": "integer"
+          },
+          "totalLessons": {
+            "type": "integer"
+          },
+          "completedLessons": {
+            "type": "integer"
+          },
+          "todayCompleted": {
+            "type": "integer"
+          },
+          "weeklyGoal": {
+            "type": "integer"
+          },
+          "averageScore": {
+            "type": "number",
+            "format": "float"
+          },
+          "currentStreak": {
+            "type": "integer"
+          },
+          "longestStreak": {
+            "type": "integer"
+          },
+          "totalPracticeTime": {
+            "type": "integer",
+            "description": "총 연습 시간 (분)"
+          },
+          "weeklyActivity": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "dailyGoal": {
+            "type": "object",
+            "properties": {
+              "completedCount": {
+                "type": "integer"
+              },
+              "dailyGoalTarget": {
+                "type": "integer"
+              },
+              "isGoalAchieved": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "UserProfileResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "isVerified",
+          "weeklyGoal",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isVerified": {
+            "type": "boolean"
+          },
+          "weeklyGoal": {
+            "type": "integer"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "USER",
+              "ADMIN"
+            ]
+          }
+        }
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "isVerified",
+          "isActive",
+          "weeklyGoal",
+          "role",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isVerified": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "weeklyGoal": {
+            "type": "integer"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "GUEST",
+              "USER",
+              "ADMIN"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WeakScriptReport": {
+        "type": "object",
+        "properties": {
+          "scriptId": {
+            "type": "integer"
+          },
+          "scriptContent": {
+            "type": "string"
+          },
+          "totalAttempts": {
+            "type": "integer"
+          },
+          "correctRate": {
+            "type": "number"
+          },
+          "lastPlayedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mostMissedWords": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "word": {
+                  "type": "string"
+                },
+                "missCount": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Script": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "articulationPlace": {
+            "type": "string",
+            "enum": [
+              "BILABIAL",
+              "ALVEOLAR",
+              "VELAR",
+              "PALATAL",
+              "GLOTTAL",
+              "MIXED",
+              "NONE"
+            ]
+          },
+          "targetConsonants": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Chapter": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "orderIndex": {
+            "type": "integer"
+          },
+          "scripts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Script"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WordGameScriptDto": {
+        "type": "object",
+        "properties": {
+          "scriptId": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "EASY",
+              "MEDIUM",
+              "HARD"
+            ]
+          },
+          "isFirstPlay": {
+            "type": "boolean"
+          },
+          "lastPlayedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "recommendedBlanks": {
+            "nullable": true,
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              }
+            }
+          },
+          "todayScore": {
+            "type": "number",
+            "nullable": true
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/assessments": {
+      "post": {
+        "tags": [
+          "진단(Assessment)"
+        ],
+        "summary": "음성 파일 업로드 및 진단 생성",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "audio": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "scriptId": {
+                    "type": "integer",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "업로드 성공 및 진단 생성 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "파일이 없거나 잘못된 형식",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "진단(Assessment)"
+        ],
+        "summary": "진단 이력 조회",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assessments/trial/policy": {
+      "get": {
+        "tags": [
+          "진단(Assessment)"
+        ],
+        "summary": "게스트 체험 정책 조회",
+        "description": "게스트 기능별 최대 체험 횟수와 Assessment TTL 정보를 반환한다. 인증 불필요.",
+        "responses": {
+          "200": {
+            "description": "정책 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "maxTrials": {
+                          "type": "object",
+                          "description": "기능별 최대 체험 횟수",
+                          "properties": {
+                            "PRACTICE": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "CONTINUOUS_READING": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "WORD_GAME": {
+                              "type": "integer",
+                              "example": 0
+                            },
+                            "LEADERBOARD": {
+                              "type": "integer",
+                              "example": 0
+                            },
+                            "HISTORY": {
+                              "type": "integer",
+                              "example": 0
+                            },
+                            "PROFILE": {
+                              "type": "integer",
+                              "example": 0
+                            }
+                          }
+                        },
+                        "assessmentTtlHours": {
+                          "type": "integer",
+                          "example": 24
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit 초과"
+          }
+        }
+      }
+    },
+    "/assessments/notifications/sse": {
+      "get": {
+        "tags": [
+          "진단(Assessment)"
+        ],
+        "summary": "실시간 분석 알림 SSE (일반 사용자)",
+        "description": "사용자의 진단 분석 완료/실패를 실시간으로 수신하는 SSE 스트림",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE 스트림 연결 성공",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "503": {
+            "description": "연결 제한 초과"
+          }
+        }
+      }
+    },
+    "/assessments/admin/user/{userId}": {
+      "get": {
+        "tags": [
+          "진단 관리"
+        ],
+        "summary": "(어드민) 특정 사용자의 전체 진단 이력 조회",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "403": {
+            "description": "관리자 권한 필요"
+          }
+        }
+      }
+    },
+    "/assessments/admin/all": {
+      "get": {
+        "tags": [
+          "진단 관리"
+        ],
+        "summary": "(어드민) 모든 사용자의 전체 진단 이력 조회",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "403": {
+            "description": "관리자 권한 필요"
+          }
+        }
+      }
+    },
+    "/assessments/admin/{id}/retry": {
+      "post": {
+        "tags": [
+          "진단 관리"
+        ],
+        "summary": "(어드민) 진단 분석 재시도",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "재시도 요청 성공"
+          }
+        }
+      }
+    },
+    "/assessments/admin/notifications/sse": {
+      "get": {
+        "tags": [
+          "진단 관리"
+        ],
+        "summary": "(어드민) 실시간 분석 알림 SSE",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE 연결 성공"
+          }
+        }
+      }
+    },
+    "/assessments/{id}": {
+      "get": {
+        "tags": [
+          "진단(Assessment)"
+        ],
+        "summary": "특정 진단 결과 조회",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공"
+          },
+          "404": {
+            "description": "진단 결과를 찾을 수 없음"
+          }
+        }
+      }
+    },
+    "/assessments/{id}/retry": {
+      "post": {
+        "tags": [
+          "진단(Assessment)"
+        ],
+        "summary": "진단 분석 재시도",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "재시도 요청 성공"
+          },
+          "404": {
+            "description": "진단 결과를 찾을 수 없음"
+          }
+        }
+      }
+    },
+    "/auth/check-email": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "이메일 중복 체크",
+        "description": "이메일이 이미 가입되어 있는지 확인합니다 (인증 여부 무관).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckEmailDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "사용 가능한 이메일",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "이미 사용 중인 이메일",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "회원가입 요청",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "가입 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "유효성 검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "이메일 인증 확인",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "인증 성공"
+          }
+        }
+      }
+    },
+    "/auth/resend-code": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "인증 코드 재전송",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendCodeDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "재전송 성공"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "로그인",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "로그인 성공 (토큰 반환)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/request-password-reset": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "비밀번호 재설정 요청",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestPasswordResetDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "재설정 코드 발송 성공"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "비밀번호 재설정 수행",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "비밀번호 변경 성공"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "토큰 갱신",
+        "description": "HttpOnly Cookie에 저장된 `refreshToken`을 사용하여 Access Token을 갱신합니다.\nSwagger UI에서는 브라우저가 쿠키를 자동으로 전송하지 못할 수 있으므로, 테스트 시 주의하세요.\n",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "갱신 성공 (Access Token 반환, 새 Refresh Token 쿠키 설정)"
+          }
+        }
+      }
+    },
+    "/auth/guest": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "게스트 계정 생성 + 토큰 발급",
+        "description": "1단계 서비스 동의를 받은 후 DB에 GUEST User를 생성하고 JWT 토큰을 발급합니다.\n같은 deviceId로 기존 게스트가 있으면 기존 계정의 토큰을 반환합니다.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestTokenDto"
+              }
+            }
+          }
+        },
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "게스트 계정 생성 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "해당 deviceId로 이미 정식 회원 승격된 계정 존재",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "요청 제한 초과"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "게스트 본인 데이터 삭제",
+        "description": "게스트 사용자가 자신의 계정과 모든 연관 데이터를 삭제합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "삭제 성공"
+          }
+        }
+      }
+    },
+    "/auth/guest/voice-consent": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "2단계 음성 데이터 수집 동의",
+        "description": "게스트 사용자의 음성 데이터 수집 동의를 기록합니다.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceConsentDto"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "음성 동의 기록 성공"
+          }
+        }
+      }
+    },
+    "/auth/guest/upgrade": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "게스트 → 정식 회원 승격",
+        "description": "게스트 계정을 이메일/비밀번호로 정식 회원으로 승격합니다. 기존 데이터가 모두 유지됩니다.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestUpgradeDto"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "승격 성공"
+          }
+        }
+      }
+    },
+    "/auth/merge-guest": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "게스트 데이터를 기존 회원에 병합",
+        "description": "게스트 계정의 활동 데이터를 로그인한 기존 회원 계정으로 이전합니다.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeGuestDto"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "병합 성공"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "로그아웃 (서버측 토큰 무효화)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "로그아웃 성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "tags": [
+          "인증"
+        ],
+        "summary": "전체 세션 로그아웃 (모든 클라이언트)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "전체 로그아웃 성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/challenges/today": {
+      "get": {
+        "tags": [
+          "데일리 챌린지(Challenge)"
+        ],
+        "summary": "오늘의 챌린지 조회",
+        "description": "오늘의 챌린지 상세 정보(스크립트, 내 참여 상태)를 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChallengeDetailResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/challenges/{id}/participate": {
+      "post": {
+        "tags": [
+          "데일리 챌린지(Challenge)"
+        ],
+        "summary": "챌린지 참여 결과 제출",
+        "description": "데일리 챌린지 플레이 결과를 제출합니다. 유저당 1회.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "챌린지 ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitChallengeParticipationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "참여 성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "챌린지 없음"
+          },
+          "409": {
+            "description": "이미 참여함"
+          }
+        }
+      }
+    },
+    "/challenges/{id}/leaderboard": {
+      "get": {
+        "tags": [
+          "데일리 챌린지(Challenge)"
+        ],
+        "summary": "챌린지 리더보드 조회",
+        "description": "챌린지 참여자 순위를 compositeScore 내림차순으로 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChallengeLeaderboardEntryDto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/challenges/{id}/my-rank": {
+      "get": {
+        "tags": [
+          "데일리 챌린지(Challenge)"
+        ],
+        "summary": "내 챌린지 순위 조회",
+        "description": "현재 유저의 해당 챌린지 순위와 참여 정보를 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/game-sessions": {
+      "post": {
+        "tags": [
+          "게임(Game)"
+        ],
+        "summary": "게임 세션 생성",
+        "description": "게임 플레이 결과를 기록합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGameSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "생성 성공"
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "게임(Game)"
+        ],
+        "summary": "게임 세션 이력 조회",
+        "description": "사용자의 게임 플레이 이력을 조회합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공"
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/game-sessions/weak-scripts": {
+      "get": {
+        "tags": [
+          "게임(Game)"
+        ],
+        "summary": "취약 스크립트 리포트",
+        "description": "정답률이 낮은 스크립트를 Top-N으로 조회합니다. 자주 틀리는 단어 Top-3 포함.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "maximum": 30
+            },
+            "description": "조회할 개수 (최대 30)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WeakScriptReport"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/game-configs/hint": {
+      "get": {
+        "tags": [
+          "게임설정(GameConfig)"
+        ],
+        "summary": "힌트 설정 조회",
+        "description": "클라이언트용 힌트 관련 설정을 반환합니다. ETag 기반 캐싱을 지원합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "설정 버전 해시"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "힌트 카테고리 설정 (key-value 쌍)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "변경 없음 (ETag 매칭)"
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/game-configs": {
+      "get": {
+        "tags": [
+          "어드민-게임설정(Admin-GameConfig)"
+        ],
+        "summary": "전체 게임 설정 목록",
+        "description": "모든 게임 설정을 반환합니다. (어드민 전용)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "value": {},
+                          "description": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedBy": {
+                            "type": "integer",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/game-configs/{key}/history": {
+      "get": {
+        "tags": [
+          "어드민-게임설정(Admin-GameConfig)"
+        ],
+        "summary": "게임 설정 변경 이력 조회",
+        "description": "특정 설정 키의 변경 이력을 최근 20건까지 반환합니다. (어드민 전용)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "설정 키 (예 xp.game.firstClear)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "configId": {
+                            "type": "integer"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "oldValue": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "newValue": {
+                            "type": "string"
+                          },
+                          "changedBy": {
+                            "type": "integer"
+                          },
+                          "changedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/game-configs/{key}": {
+      "put": {
+        "tags": [
+          "어드민-게임설정(Admin-GameConfig)"
+        ],
+        "summary": "게임 설정 업데이트",
+        "description": "특정 게임 설정 값을 변경합니다. (어드민 전용)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "설정 키 (예 xp.game.firstClear)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGameConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "업데이트 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "유효성 검증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "관리자 권한 필요",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gamification/profile": {
+      "get": {
+        "tags": [
+          "게임화(Gamification)"
+        ],
+        "summary": "게임화 프로필 조회",
+        "description": "레벨, XP, 스트릭, 뱃지 수 등 게임화 프로필을 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "level": {
+                          "type": "integer"
+                        },
+                        "totalXp": {
+                          "type": "integer"
+                        },
+                        "xpToNextLevel": {
+                          "type": "integer"
+                        },
+                        "levelProgress": {
+                          "type": "number"
+                        },
+                        "weeklyXp": {
+                          "type": "integer"
+                        },
+                        "currentStreak": {
+                          "type": "integer"
+                        },
+                        "longestStreak": {
+                          "type": "integer"
+                        },
+                        "unlockedBadgeCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gamification/badges": {
+      "get": {
+        "tags": [
+          "게임화(Gamification)"
+        ],
+        "summary": "뱃지 목록 조회",
+        "description": "전체 뱃지 목록과 사용자의 해금 상태를 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "iconName": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "STREAK",
+                              "SCORE",
+                              "COUNT",
+                              "LEVEL",
+                              "SPECIAL"
+                            ]
+                          },
+                          "isUnlocked": {
+                            "type": "boolean"
+                          },
+                          "unlockedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gamification/leaderboard": {
+      "get": {
+        "tags": [
+          "게임화(Gamification)"
+        ],
+        "summary": "XP 리더보드",
+        "description": "XP 기준 상위 사용자 순위를 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rank": {
+                            "type": "integer"
+                          },
+                          "userId": {
+                            "type": "integer"
+                          },
+                          "firstName": {
+                            "type": "string"
+                          },
+                          "level": {
+                            "type": "integer"
+                          },
+                          "totalXp": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gamification/rewards/pending": {
+      "get": {
+        "tags": [
+          "게임화(Gamification)"
+        ],
+        "summary": "미확인 보상 조회",
+        "description": "사용자가 아직 확인하지 않은 뱃지와 레벨업 정보를 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "badges": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "iconName": {
+                                "type": "string"
+                              },
+                              "unlockedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "levelUp": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "newLevel": {
+                              "type": "integer"
+                            },
+                            "oldLevel": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/gamification/rewards/acknowledge": {
+      "post": {
+        "tags": [
+          "게임화(Gamification)"
+        ],
+        "summary": "보상 확인 처리",
+        "description": "미확인 보상(뱃지, 레벨업)을 모두 확인 상태로 변경합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "badgeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "확인할 뱃지 ID 배열"
+                  },
+                  "levelAcknowledged": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "확인한 레벨 번호"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "처리 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "acknowledgedBadges": {
+                          "type": "integer"
+                        },
+                        "acknowledgedLevel": {
+                          "type": "integer",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/learning-records/streak": {
+      "get": {
+        "tags": [
+          "학습 기록(Learning)"
+        ],
+        "summary": "사용자 스트릭 조회",
+        "description": "현재 스트릭과 최장 스트릭을 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "currentStreak": {
+                          "type": "integer"
+                        },
+                        "longestStreak": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/learning-records/daily-goal": {
+      "get": {
+        "tags": [
+          "학습 기록(Learning)"
+        ],
+        "summary": "오늘의 일일 목표 현황",
+        "description": "오늘의 학습 완료 횟수와 목표 달성 여부를 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "completedCount": {
+                          "type": "integer"
+                        },
+                        "dailyGoalTarget": {
+                          "type": "integer"
+                        },
+                        "isGoalAchieved": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scripts/chapters": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "챕터 목록 조회",
+        "description": "챕터 목록을 조회합니다.",
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Chapter"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "챕터 생성",
+        "description": "새로운 챕터를 생성합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChapterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "생성 성공"
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/scripts/chapters/{id}": {
+      "put": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "챕터 수정",
+        "description": "기존 챕터를 수정합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateChapterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "수정 성공"
+          },
+          "404": {
+            "description": "챕터를 찾을 수 없음"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "챕터 삭제",
+        "description": "챕터를 삭제합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "삭제 성공"
+          },
+          "404": {
+            "description": "챕터를 찾을 수 없음"
+          }
+        }
+      }
+    },
+    "/scripts/chapters/{id}/restore": {
+      "post": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "삭제된 챕터 복원",
+        "description": "soft delete된 챕터와 하위 구절을 복원합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "복원 성공"
+          },
+          "404": {
+            "description": "챕터를 찾을 수 없음"
+          }
+        }
+      }
+    },
+    "/scripts/chapters/me": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "사용자 챕터 목록 (해금 + 번들 진행도 포함)",
+        "description": "사용자의 챕터 목록을 해금 상태, 번들 진행도와 함께 조회합니다. 게스트는 첫 챕터만 해금, 진행도 0으로 반환됩니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "orderIndex": {
+                            "type": "integer"
+                          },
+                          "isUnlocked": {
+                            "type": "boolean",
+                            "description": "챕터 해금 여부"
+                          },
+                          "progress": {
+                            "type": "object",
+                            "description": "챕터 진행도 (해금된 번들만 집계)",
+                            "properties": {
+                              "completedScripts": {
+                                "type": "integer",
+                                "description": "완료한 구절 수"
+                              },
+                              "totalScripts": {
+                                "type": "integer",
+                                "description": "해금된 번들의 총 구절 수"
+                              },
+                              "completionRate": {
+                                "type": "number",
+                                "description": "완료율 (0~1)"
+                              }
+                            }
+                          },
+                          "bundles": {
+                            "type": "array",
+                            "description": "챕터 내 번들 목록 (N개 구절 단위 해금)",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "bundleIndex": {
+                                  "type": "integer",
+                                  "description": "번들 인덱스 (0-based)"
+                                },
+                                "completedCount": {
+                                  "type": "integer",
+                                  "description": "완료한 구절 수"
+                                },
+                                "totalCount": {
+                                  "type": "integer",
+                                  "description": "번들 내 총 구절 수"
+                                },
+                                "isUnlocked": {
+                                  "type": "boolean",
+                                  "description": "번들 해금 여부"
+                                },
+                                "isCompleted": {
+                                  "type": "boolean",
+                                  "description": "번들 완료 여부"
+                                },
+                                "scripts": {
+                                  "type": "array",
+                                  "description": "번들 내 구절 목록",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "integer"
+                                      },
+                                      "content": {
+                                        "type": "string"
+                                      },
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "difficulty": {
+                                        "type": "string"
+                                      },
+                                      "orderIndex": {
+                                        "type": "integer"
+                                      },
+                                      "isCompleted": {
+                                        "type": "boolean"
+                                      },
+                                      "bestScore": {
+                                        "nullable": true,
+                                        "type": "number"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/scripts/random/me": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "인증 사용자 랜덤 구절 (해금 챕터만)",
+        "description": "인증된 사용자의 해금된 챕터에서 랜덤 구절을 조회합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "difficulty",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EASY",
+                "MEDIUM",
+                "HARD"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "articulationPlace",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BILABIAL",
+                "ALVEOLAR",
+                "VELAR",
+                "PALATAL",
+                "GLOTTAL",
+                "MIXED",
+                "NONE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Script"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/scripts/next/me": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "다음 순서 구절 + 챕터/번들 진행도",
+        "description": "인증된 사용자의 다음 미완료 구절과 챕터/번들 진행도를 조회합니다. 전체 완료 시 랜덤 구절을 반환합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "script": {
+                          "$ref": "#/components/schemas/Script"
+                        },
+                        "chapter": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "completedScripts": {
+                              "type": "integer"
+                            },
+                            "totalScripts": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "overallProgress": {
+                          "nullable": true,
+                          "type": "object",
+                          "properties": {
+                            "completedChapters": {
+                              "type": "integer"
+                            },
+                            "totalChapters": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "bundle": {
+                          "nullable": true,
+                          "type": "object",
+                          "description": "현재 활성 번들 진행도 (전체 완료 시 null)",
+                          "properties": {
+                            "bundleIndex": {
+                              "type": "integer",
+                              "description": "현재 번들 인덱스 (0-based)"
+                            },
+                            "completedCount": {
+                              "type": "integer",
+                              "description": "이 번들에서 완료한 구절 수"
+                            },
+                            "totalCount": {
+                              "type": "integer",
+                              "description": "이 번들의 총 구절 수"
+                            },
+                            "totalBundles": {
+                              "type": "integer",
+                              "description": "챕터 내 총 번들 수"
+                            }
+                          }
+                        },
+                        "bundleScripts": {
+                          "nullable": true,
+                          "type": "array",
+                          "description": "현재 활성 번들의 구절 목록 (전체 완료 시 null)",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "content": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "difficulty": {
+                                "type": "string"
+                              },
+                              "orderIndex": {
+                                "type": "integer"
+                              },
+                              "isCompleted": {
+                                "type": "boolean"
+                              },
+                              "bestScore": {
+                                "nullable": true,
+                                "type": "number"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/scripts/word-game/today": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "오늘의 워드게임 구절 (학습 우선 + 적응형 난이도)",
+        "description": "오늘 낭독 완료한 구절을 우선 노출하고, 점수 기반 빈칸 수를 추천합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "count",
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "maximum": 50
+            },
+            "description": "가져올 구절 수 (최대 50)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WordGameScriptDto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scripts/word-game": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "워드게임용 구절 (해금 챕터 한정)",
+        "description": "인증된 사용자의 해금된 챕터에서 워드게임용 구절을 조회합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "count",
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "maximum": 200
+            },
+            "description": "가져올 구절 수 (최대 200)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Script"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/scripts/content/version": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "콘텐츠 최신 버전 조회",
+        "description": "콘텐츠의 최신 버전 체크섬과 갱신 시각을 반환합니다.",
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "checksum": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scripts": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "구절 목록 조회",
+        "description": "발음 진단용 구절 목록을 조회합니다. 필터링 옵션 지원.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "description": "카테고리 (bible, practice, daily 등)"
+          },
+          {
+            "in": "query",
+            "name": "difficulty",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EASY",
+                "MEDIUM",
+                "HARD"
+              ]
+            },
+            "description": "난이도"
+          },
+          {
+            "in": "query",
+            "name": "articulationPlace",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BILABIAL",
+                "ALVEOLAR",
+                "VELAR",
+                "PALATAL",
+                "GLOTTAL",
+                "MIXED",
+                "NONE"
+              ]
+            },
+            "description": "조음 위치"
+          },
+          {
+            "in": "query",
+            "name": "isActive",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "활성화 상태"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "조회할 개수"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "오프셋"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Script"
+                          }
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "구절 생성",
+        "description": "새로운 발음 진단 구절을 생성합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScriptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "생성 성공"
+          },
+          "400": {
+            "description": "필수 필드 누락"
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/scripts/random": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "랜덤 구절 조회",
+        "description": "조건에 맞는 활성화된 구절 중 랜덤하게 하나를 조회합니다.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "description": "카테고리 필터"
+          },
+          {
+            "in": "query",
+            "name": "difficulty",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EASY",
+                "MEDIUM",
+                "HARD"
+              ]
+            },
+            "description": "난이도 필터"
+          },
+          {
+            "in": "query",
+            "name": "articulationPlace",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BILABIAL",
+                "ALVEOLAR",
+                "VELAR",
+                "PALATAL",
+                "GLOTTAL",
+                "MIXED",
+                "NONE"
+              ]
+            },
+            "description": "조음 위치 필터"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Script"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scripts/{id}/restore": {
+      "post": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "삭제된 구절 복원",
+        "description": "soft delete된 구절을 복원합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "복원 성공"
+          },
+          "404": {
+            "description": "구절을 찾을 수 없음"
+          }
+        }
+      }
+    },
+    "/scripts/{id}": {
+      "get": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "구절 단일 조회",
+        "description": "ID로 특정 구절을 조회합니다.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "구절 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공"
+          },
+          "404": {
+            "description": "구절을 찾을 수 없음"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "구절 수정",
+        "description": "기존 구절을 수정합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScriptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "수정 성공"
+          },
+          "404": {
+            "description": "구절을 찾을 수 없음"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "구절(Script)"
+        ],
+        "summary": "구절 삭제",
+        "description": "구절을 삭제합니다.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "삭제 성공"
+          },
+          "404": {
+            "description": "구절을 찾을 수 없음"
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "현재 로그인한 사용자 정보 조회",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/users/profile": {
+      "put": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "프로필 정보 수정",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "수정 성공"
+          }
+        }
+      }
+    },
+    "/users/withdraw": {
+      "delete": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "회원 탈퇴 (계정 비활성화)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "탈퇴 성공"
+          }
+        }
+      }
+    },
+    "/users/stats": {
+      "get": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "학습 대시보드 통계 조회",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/users/achievements": {
+      "get": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "성취 배지 목록 조회",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          }
+        }
+      }
+    },
+    "/users/script-progress": {
+      "get": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "스크립트 진행도 조회 (완료 ID + 최고 점수)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "completedScriptIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer"
+                          },
+                          "example": [
+                            1,
+                            2,
+                            5
+                          ]
+                        },
+                        "bestScores": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "number"
+                          },
+                          "example": {
+                            "1": 92.5,
+                            "2": 87.3,
+                            "5": 95
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/weekly-goal": {
+      "put": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "주간 학습 목표 수정",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "weeklyGoal": {
+                    "type": "number",
+                    "example": 35
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "수정 성공"
+          }
+        }
+      }
+    },
+    "/users/password": {
+      "put": {
+        "tags": [
+          "사용자"
+        ],
+        "summary": "비밀번호 변경",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 8
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "변경 성공"
+          }
+        }
+      }
+    },
+    "/users/admin/all": {
+      "get": {
+        "tags": [
+          "사용자 관리"
+        ],
+        "summary": "(어드민) 전체 사용자 목록 조회",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공"
+          }
+        }
+      }
+    },
+    "/users/admin/{userId}": {
+      "patch": {
+        "tags": [
+          "사용자 관리"
+        ],
+        "summary": "(어드민) 사용자 정보 수정",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "수정할 사용자 ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firstName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 20
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "USER",
+                      "ADMIN"
+                    ]
+                  },
+                  "weeklyGoal": {
+                    "type": "number",
+                    "minimum": 1
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "수정 성공"
+          },
+          "400": {
+            "description": "유효하지 않은 입력"
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "403": {
+            "description": "관리자 권한 필요"
+          },
+          "404": {
+            "description": "사용자를 찾을 수 없음"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

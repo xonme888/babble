@@ -1,0 +1,46 @@
+{
+    "ts-node": {
+        "files": true
+    },
+    "compilerOptions": {
+        "lib": [
+            "ES2022"
+        ],
+        "target": "ES2022",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "outDir": "./build",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "esModuleInterop": true,
+        "sourceMap": true,
+        "strictNullChecks": true,
+        "noImplicitAny": true,
+        "strictFunctionTypes": true,
+        "strictPropertyInitialization": false,
+        "skipLibCheck": true,
+        "baseUrl": "./src",
+        "paths": {
+            "@/*": [
+                "./*"
+            ],
+            "@features/*": [
+                "./features/*"
+            ],
+            "@config/*": [
+                "./shared/infra/config/*"
+            ],
+            "@lib/*": [
+                "./shared/lib/*"
+            ],
+            "@shared/*": [
+                "./shared/*"
+            ]
+        }
+    },
+    "exclude": [
+        "node_modules",
+        "build",
+        "dist"
+    ]
+}

@@ -1,0 +1,53 @@
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.prod.example
+!.env.prod.generated.example
+!.env.prod.manual.example
+
+# Database
+*.sqlite
+*.sqlite-journal
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+*.log
+
+# Testing
+coverage/
+.nyc_output/
+
+# IDEs and Editors
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+.cache/
+uploads/
+
+# Production data (프로젝트 내 데이터 디렉토리)
+.data/
+.data-eph/
+backups/

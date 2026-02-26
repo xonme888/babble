@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+*.js
+*.js.map
+
+# Compiled files in src (TypeScript should not generate here)
+src/**/*.js
+src/**/*.js.map
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Database
+*.db
+
+# Temporary files
+tmp/
+temp/
+
+# Uploads (user-generated content)
+uploads/
+
+# Test output files
+test_output.txt
+final_test_output.txt
+worker_full_logs.txt
+
+# Scripts (standalone)
+scripts/*.sh
+scripts/*.py

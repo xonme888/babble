@@ -1,0 +1,87 @@
+{
+    "validation": {
+        "email": {
+            "empty": "Email cannot be empty",
+            "invalid_format": "Invalid email format",
+            "too_long": "Email is too long (max 254 characters)"
+        },
+        "password": {
+            "empty": "Password cannot be empty",
+            "length": "Password must be 8-20 characters",
+            "uppercase": "Password must contain at least one uppercase letter",
+            "lowercase": "Password must contain at least one lowercase letter",
+            "special": "Password must contain at least one special character",
+            "empty_hash": "Hashed password cannot be empty"
+        },
+        "code": {
+            "invalid": "Invalid or expired verification code",
+            "expired": "Verification code has expired",
+            "length": "Verification code must be 6 characters"
+        },
+        "token": {
+            "missing": "Access token is missing",
+            "invalid": "Invalid or expired access token",
+            "revoked": "Token has been revoked",
+            "invalid_refresh": "Invalid or expired refresh token"
+        },
+        "invalid_id": "Invalid ID format"
+    },
+    "auth": {
+        "registration_success": "Registration successful. Please check your email for verification code.",
+        "verification_success": "Email verified successfully",
+        "verification_code_resent": "Verification code resent successfully",
+        "password_reset_sent": "Password reset code sent to your email",
+        "password_reset_success": "Password has been successfully reset",
+        "logout_success": "Logged out successfully",
+        "email_already_verified": "Email is already verified",
+        "email_not_verified": "Email not verified. Please verify your email and try again.",
+        "email_verification_required": "Email verification required. Please check your verification code.",
+        "invalid_credentials": "Invalid credentials",
+        "user_not_found": "User not found",
+        "user_already_active": "User is already active",
+        "user_already_inactive": "User is already inactive",
+        "account_deactivated": "Account is deactivated. Please contact support.",
+        "account_suspended": "Account has been suspended. Please contact customer support.",
+        "account_locked": "Account is temporarily locked. Please try again later.",
+        "email_in_use": "Email is already in use",
+        "email_available": "Email is available",
+        "verification_code_cooldown": "Verification code can be resent after {{seconds}} seconds.",
+        "admin_required": "Access denied. Admin role required.",
+        "invalid_verification_code": "Invalid or expired verification code",
+        "invalid_reset_code": "Invalid or expired reset code",
+        "current_password_incorrect": "Current password is incorrect",
+        "email_not_verified_simple": "Email is not verified"
+    },
+    "user": {
+        "profile_update_success": "Profile updated successfully",
+        "withdraw_success": "Account withdrawn successfully",
+        "not_found": "User not found"
+    },
+    "assessment": {
+        "not_found": "Assessment not found",
+        "cannot_retry": "Cannot retry: max retries exceeded or invalid status"
+    },
+    "script": {
+        "not_found": "Script not found",
+        "no_available_scripts": "No available scripts found"
+    },
+    "chapter": {
+        "not_found": "Chapter not found",
+        "script_not_unlocked": "This script is not yet unlocked. Please complete the previous chapter first.",
+        "not_unlocked": "This chapter is not yet unlocked."
+    },
+    "error": {
+        "default": "Internal Server Error",
+        "resource_not_found": "Resource not found",
+        "unauthorized": "Unauthorized access",
+        "forbidden": "Access denied"
+    },
+    "common": {
+        "success": {
+            "retrieved": "Successfully retrieved",
+            "created": "Successfully created",
+            "updated": "Successfully updated",
+            "deleted": "Successfully deleted"
+        }
+    }
+}
