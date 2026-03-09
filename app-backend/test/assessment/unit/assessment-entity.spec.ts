@@ -160,7 +160,7 @@ describe("Assessment Entity (평가 엔티티 단위 테스트)", () => {
     })
 
     describe("applyAnalysisResult (AI 분석 결과 적용)", () => {
-        it("성공 결과에서 fa_score와 phoneme_accuracy를 feedback에 포함해야 한다", () => {
+        it("성공 결과에서 faScore와 phonemeAccuracy를 feedback에 포함해야 한다", () => {
             // Given
             const assessment = new Assessment()
             assessment.status = AssessmentStatus.ANALYZING
@@ -180,11 +180,11 @@ describe("Assessment Entity (평가 엔티티 단위 테스트)", () => {
 
             // Then
             expect(assessment.status).toBe(AssessmentStatus.COMPLETED)
-            expect(assessment.feedback!.fa_score).toBe(0.76)
-            expect(assessment.feedback!.phoneme_accuracy).toBe(0.92)
+            expect(assessment.feedback!.faScore).toBe(0.76)
+            expect(assessment.feedback!.phonemeAccuracy).toBe(0.92)
         })
 
-        it("fa_score가 없는 AI 결과도 정상 처리해야 한다 (하위 호환)", () => {
+        it("faScore가 없는 AI 결과도 정상 처리해야 한다 (하위 호환)", () => {
             // Given
             const assessment = new Assessment()
             assessment.status = AssessmentStatus.ANALYZING
@@ -200,7 +200,203 @@ describe("Assessment Entity (평가 엔티티 단위 테스트)", () => {
 
             // Then
             expect(assessment.status).toBe(AssessmentStatus.COMPLETED)
-            expect(assessment.feedback!.fa_score).toBeUndefined()
+            expect(assessment.feedback!.faScore).toBeUndefined()
+        })
+
+        it("fluency 필드가 포함된 AI 결과를 정상 적용해야 한다", () => {
+            // Given
+            const assessment = new Assessment()
+            assessment.status = AssessmentStatus.ANALYZING
+            const result: AIAnalysisResult = {
+                assessmentId: 1,
+                success: true,
+                score: 90,
+                transcribed_text: "안녕하세요",
+                similarity: 0.90,
+                alignment: [{ text: "안녕하세요", status: "correct" }],
+                fluency_score: 72.5,
+                fluency_detail: {
+                    pause_score: 85.0,
+                    stability_score: 60.0,
+                    intonation_score: 70.0,
+                    unnatural_pauses: [{ after_word_index: 0, duration: 0.8 }],
+                    mean_spm: 240.0,
+                    cv: 0.2,
+                    chunk_rates: [230, 250, 240, 240],
+                    sentence_intonations: [{
+                        type: "declarative",
+                        expected_trend: "falling",
+                        actual_trend: "falling",
+                        score: 100,
+                    }],
+                },
+            }
+
+            // When
+            assessment.applyAnalysisResult(result)
+
+            // Then
+            expect(assessment.status).toBe(AssessmentStatus.COMPLETED)
+            expect(assessment.fluencyScore).toBe(72.5)
+            expect(assessment.fluencyDetail).toBeDefined()
+            expect(assessment.fluencyDetail!.pauseScore).toBe(85.0)
+            expect(assessment.fluencyDetail!.stabilityScore).toBe(60.0)
+            expect(assessment.fluencyDetail!.intonationScore).toBe(70.0)
+        })
+
+        it("fluency 필드가 없는 AI 결과도 정상 처리해야 한다 (하위 호환)", () => {
+            // Given
+            const assessment = new Assessment()
+            assessment.status = AssessmentStatus.ANALYZING
+            const result: AIAnalysisResult = {
+                assessmentId: 1,
+                success: true,
+                score: 80,
+                transcribed_text: "테스트",
+            }
+
+            // When
+            assessment.applyAnalysisResult(result)
+
+            // Then
+            expect(assessment.status).toBe(AssessmentStatus.COMPLETED)
+            expect(assessment.fluencyScore).toBeNull()
+            expect(assessment.fluencyDetail).toBeNull()
+        })
+
+        it("voice_quality 필드가 포함된 AI 결과를 정상 적용해야 한다", () => {
+            // Given
+            const assessment = new Assessment()
+            assessment.status = AssessmentStatus.ANALYZING
+            const result: AIAnalysisResult = {
+                assessmentId: 1,
+                success: true,
+                score: 88,
+                transcribed_text: "안녕하세요",
+                voice_quality: {
+                    hnr: 22.5,
+                    jitter_percent: 0.8,
+                    shimmer_percent: 3.2,
+                    hnr_severity: "normal",
+                    jitter_severity: "normal",
+                    shimmer_severity: "normal",
+                    voice_quality_score: 90.0,
+                },
+            }
+
+            // When
+            assessment.applyAnalysisResult(result)
+
+            // Then
+            expect(assessment.status).toBe(AssessmentStatus.COMPLETED)
+            expect(assessment.voiceQuality).toBeDefined()
+            expect(assessment.voiceQuality!.hnr).toBe(22.5)
+            expect(assessment.voiceQuality!.jitterPercent).toBe(0.8)
+            expect(assessment.voiceQuality!.shimmerPercent).toBe(3.2)
+            expect(assessment.voiceQuality!.voiceQualityScore).toBe(90.0)
+        })
+
+        it("monotone 필드가 포함된 AI 결과를 정상 적용해야 한다", () => {
+            // Given
+            const assessment = new Assessment()
+            assessment.status = AssessmentStatus.ANALYZING
+            const result: AIAnalysisResult = {
+                assessmentId: 1,
+                success: true,
+                score: 75,
+                transcribed_text: "테스트 문장입니다",
+                monotone: {
+                    f0_mean: 180.5,
+                    f0_stdev: 35.2,
+                    f0_range: 120.0,
+                    f0_cv: 0.195,
+                    severity: "normal",
+                    monotone_score: 82.0,
+                },
+            }
+
+            // When
+            assessment.applyAnalysisResult(result)
+
+            // Then
+            expect(assessment.status).toBe(AssessmentStatus.COMPLETED)
+            expect(assessment.monotone).toBeDefined()
+            expect(assessment.monotone!.f0Mean).toBe(180.5)
+            expect(assessment.monotone!.f0Stdev).toBe(35.2)
+            expect(assessment.monotone!.severity).toBe("normal")
+            expect(assessment.monotone!.monotoneScore).toBe(82.0)
+        })
+
+        it("stuttering 필드가 포함된 AI 결과를 정상 적용해야 한다", () => {
+            // Given
+            const assessment = new Assessment()
+            assessment.status = AssessmentStatus.ANALYZING
+            const result: AIAnalysisResult = {
+                assessmentId: 1,
+                success: true,
+                score: 70,
+                transcribed_text: "가 가 나다",
+                stuttering: {
+                    total_syllables: 5,
+                    total_disfluencies: 2,
+                    repetition_count: 1,
+                    prolongation_count: 0,
+                    block_count: 1,
+                    disfluency_rate: 40.0,
+                    severity: "moderate",
+                    stuttering_score: 45.0,
+                    events: [
+                        {
+                            type: "repetition",
+                            word_index: 0,
+                            word: "가",
+                            duration: 0.3,
+                            detail: "단어 반복",
+                        },
+                        {
+                            type: "block",
+                            word_index: 1,
+                            word: "나다",
+                            duration: 1.5,
+                            detail: "무음 블록",
+                        },
+                    ],
+                },
+            }
+
+            // When
+            assessment.applyAnalysisResult(result)
+
+            // Then
+            expect(assessment.status).toBe(AssessmentStatus.COMPLETED)
+            expect(assessment.stuttering).toBeDefined()
+            expect(assessment.stuttering!.repetitionCount).toBe(1)
+            expect(assessment.stuttering!.blockCount).toBe(1)
+            expect(assessment.stuttering!.disfluencyRate).toBe(40.0)
+            expect(assessment.stuttering!.severity).toBe("moderate")
+            expect(assessment.stuttering!.events).toHaveLength(2)
+            expect(assessment.stuttering!.events[0].type).toBe("repetition")
+        })
+
+        it("voice_quality/monotone/stuttering 필드가 없는 AI 결과도 정상 처리해야 한다 (하위 호환)", () => {
+            // Given
+            const assessment = new Assessment()
+            assessment.status = AssessmentStatus.ANALYZING
+            const result: AIAnalysisResult = {
+                assessmentId: 1,
+                success: true,
+                score: 80,
+                transcribed_text: "테스트",
+            }
+
+            // When
+            assessment.applyAnalysisResult(result)
+
+            // Then
+            expect(assessment.status).toBe(AssessmentStatus.COMPLETED)
+            expect(assessment.voiceQuality).toBeNull()
+            expect(assessment.monotone).toBeNull()
+            expect(assessment.stuttering).toBeNull()
         })
 
         it("실패 결과에서 failAnalysis를 호출해야 한다", () => {

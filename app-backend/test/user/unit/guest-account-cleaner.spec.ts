@@ -28,7 +28,7 @@ describe("GuestAccountCleaner", () => {
             await cleaner.cleanUp()
 
             expect(mockUserRepo.findNoConsentGuests).toHaveBeenCalledTimes(1)
-            expect(mockUserRepo.hardDelete).toHaveBeenCalledWith(100)
+            expect(mockUserRepo.hardDeleteBatch).toHaveBeenCalledWith([100])
             expect(mockLogger.info).toHaveBeenCalledWith(
                 expect.stringContaining("동의 미수집 게스트 1건 hard delete")
             )
@@ -42,7 +42,7 @@ describe("GuestAccountCleaner", () => {
             await cleaner.cleanUp()
 
             expect(mockUserRepo.findInactiveGuests).toHaveBeenCalledTimes(1)
-            expect(mockUserRepo.softDelete).toHaveBeenCalledWith(200)
+            expect(mockUserRepo.softDeleteBatch).toHaveBeenCalledWith([200])
             expect(mockLogger.info).toHaveBeenCalledWith(
                 expect.stringContaining("비활성 게스트 1건 soft delete")
             )
@@ -54,8 +54,8 @@ describe("GuestAccountCleaner", () => {
 
             await cleaner.cleanUp()
 
-            expect(mockUserRepo.hardDelete).not.toHaveBeenCalled()
-            expect(mockUserRepo.softDelete).not.toHaveBeenCalled()
+            expect(mockUserRepo.hardDeleteBatch).not.toHaveBeenCalled()
+            expect(mockUserRepo.softDeleteBatch).not.toHaveBeenCalled()
         })
 
         it("여러 게스트를 일괄 처리한다", async () => {
@@ -69,10 +69,8 @@ describe("GuestAccountCleaner", () => {
 
             await cleaner.cleanUp()
 
-            expect(mockUserRepo.hardDelete).toHaveBeenCalledTimes(3)
-            expect(mockUserRepo.hardDelete).toHaveBeenCalledWith(1)
-            expect(mockUserRepo.hardDelete).toHaveBeenCalledWith(2)
-            expect(mockUserRepo.hardDelete).toHaveBeenCalledWith(3)
+            expect(mockUserRepo.hardDeleteBatch).toHaveBeenCalledTimes(1)
+            expect(mockUserRepo.hardDeleteBatch).toHaveBeenCalledWith([1, 2, 3])
         })
 
         it("동의 미수집 정리 실패 시 에러 로그를 남기고 비활성 정리는 계속 진행한다", async () => {
@@ -85,7 +83,7 @@ describe("GuestAccountCleaner", () => {
             expect(mockLogger.error).toHaveBeenCalledWith(
                 expect.stringContaining("동의 미수집 게스트 정리 실패")
             )
-            expect(mockUserRepo.softDelete).toHaveBeenCalledWith(200)
+            expect(mockUserRepo.softDeleteBatch).toHaveBeenCalledWith([200])
         })
 
         it("비활성 게스트 정리 실패 시 에러 로그를 남긴다", async () => {

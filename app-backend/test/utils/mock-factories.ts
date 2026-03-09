@@ -43,13 +43,53 @@ import type { ChapterUnlockPolicy } from "@features/script/domain/chapter-unlock
 import type { StreakCalculator } from "@features/learning/domain/streak-calculator"
 import type { Assessment, AssessmentStatus } from "@features/assessment/domain/assessment.entity"
 import type { IAnalysisQueue } from "@shared/core/queue.interface"
-import type { IEmailQueue } from "@shared/core/queue.interface"
+import type { IEmailQueue, IPushQueue } from "@shared/core/queue.interface"
 import type { IConfigService } from "@shared/core/config.interface"
 import type { DataSource, Repository } from "typeorm"
 import type { VerificationService } from "@features/auth/application/verification.service"
 import type { PasswordResetService } from "@features/auth/application/password-reset.service"
 import type { DailyChallengeRepository } from "@features/game/infrastructure/daily-challenge.repository"
 import type { ChallengeParticipationRepository } from "@features/game/infrastructure/challenge-participation.repository"
+import type { SkillProfileCalculator } from "@features/difficulty/domain/skill-profile-calculator"
+import type { SkillProfileService } from "@features/difficulty/application/skill-profile.service"
+import type { PronunciationErrorPatternRepository } from "@features/phoneme/infrastructure/pronunciation-error-pattern.repository"
+import type { UserErrorPatternRepository } from "@features/phoneme/infrastructure/user-error-pattern.repository"
+import type { PhonemeScoreRepository } from "@features/phoneme/infrastructure/phoneme-score.repository"
+import type { MinimalPairRepository } from "@features/phoneme/infrastructure/minimal-pair.repository"
+import type { MinimalPairService } from "@features/phoneme/application/minimal-pair.service"
+import type { SRSItemRepository } from "@features/srs/infrastructure/srs-item.repository"
+import type { SrsService } from "@features/srs/application/srs.service"
+import type { ISrsProvider } from "@features/srs/domain/srs-provider.interface"
+import type { PhonemeScoreService } from "@features/phoneme/application/phoneme-score.service"
+import type { DeviceTokenRepository } from "@features/notification/infrastructure/device-token.repository"
+import type { NotificationPreferenceRepository } from "@features/notification/infrastructure/notification-preference.repository"
+import type { DeviceTokenService } from "@features/notification/application/device-token.service"
+import type { NotificationPreferenceService } from "@features/notification/application/notification-preference.service"
+import type { PushNotificationService } from "@features/notification/application/push-notification.service"
+import type { IPushNotificationSender } from "@features/notification/domain/push-notification-sender.interface"
+import type { IDeviceTokenReader } from "@features/notification/domain/device-token-reader.interface"
+import type { WeeklyReportRepository } from "@features/weekly-report/infrastructure/weekly-report.repository"
+import type { WeeklyReportService } from "@features/weekly-report/application/weekly-report.service"
+import type { ScenarioRepository } from "@features/scenario/infrastructure/scenario.repository"
+import type { DialogueLineRepository } from "@features/scenario/infrastructure/dialogue-line.repository"
+import type { ScenarioSessionRepository } from "@features/scenario/infrastructure/scenario-session.repository"
+import type { ScenarioLineResultRepository } from "@features/scenario/infrastructure/scenario-line-result.repository"
+import type { ScenarioAdminService } from "@features/scenario/application/scenario-admin.service"
+import type { ScenarioService } from "@features/scenario/application/scenario.service"
+import type { BreathingExerciseRepository } from "@features/therapy/infrastructure/breathing-exercise.repository"
+import type { TherapyProgressRepository } from "@features/therapy/infrastructure/therapy-progress.repository"
+import type { TherapySessionRepository } from "@features/therapy/infrastructure/therapy-session.repository"
+import type { TherapyService } from "@features/therapy/application/therapy.service"
+import type { TherapistClientRepository } from "@features/therapy/infrastructure/therapist-client.repository"
+import type { TherapistAssignmentRepository } from "@features/therapy/infrastructure/therapist-assignment.repository"
+import type { SlpDashboardService } from "@features/therapy/application/slp-dashboard.service"
+import type { IPhonemeScoreReader } from "@features/phoneme/domain/phoneme-score-reader.interface"
+import type { IConsecutiveErrorTracker } from "@features/therapy/domain/consecutive-error-tracker.interface"
+import type { OralMotorExerciseRepository } from "@features/therapy/infrastructure/oral-motor-exercise.repository"
+import type { ClinicalNormRepository } from "@features/therapy/infrastructure/clinical-norm.repository"
+import type { PhaseProgressionRuleRepository } from "@features/therapy/infrastructure/phase-progression-rule.repository"
+import type { IAssessmentStatsProvider } from "@features/assessment/domain/assessment-stats-provider.interface"
+import type { TherapyRecommendationService } from "@features/therapy/application/therapy-recommendation.service"
 
 /** IRedisService mock — graceful + required 메서드 전체 */
 export function createMockRedisService(
@@ -153,6 +193,7 @@ export function createMockUserRepository(
         save: jest.fn(),
         saveAll: jest.fn().mockImplementation(async (users) => users),
         findById: jest.fn(),
+        findByIds: jest.fn().mockResolvedValue([]),
         findByIdOrThrow: jest.fn(),
         findByEmail: jest.fn(),
         findByEmailWithPassword: jest.fn(),
@@ -165,7 +206,9 @@ export function createMockUserRepository(
         findInactiveGuests: jest.fn(),
         findNoConsentGuests: jest.fn(),
         softDelete: jest.fn(),
+        softDeleteBatch: jest.fn(),
         hardDelete: jest.fn(),
+        hardDeleteBatch: jest.fn(),
         mergeGuestData: jest.fn(),
         ...overrides,
     } as jest.Mocked<UserRepository>
@@ -192,9 +235,12 @@ export function createMockAssessmentRepository(
         getScriptProgress: jest.fn().mockResolvedValue({
             completedScriptIds: [],
             bestScores: {},
+            lastPracticedAt: {},
         }),
         findTodayCompletedByUser: jest.fn().mockResolvedValue([]),
         findStuckAssessments: jest.fn().mockResolvedValue([]),
+        getScoresByArticulationPlace: jest.fn().mockResolvedValue([]),
+        getScoreTrends: jest.fn().mockResolvedValue([]),
         ...overrides,
     } as jest.Mocked<AssessmentRepository>
 }
@@ -336,6 +382,8 @@ export function createMockLearningRecordService(
             .fn()
             .mockResolvedValue({ completedCount: 0, dailyGoalTarget: 3, isGoalAchieved: false }),
         isOvertime: jest.fn().mockResolvedValue(false),
+        hasActivityOnDate: jest.fn().mockResolvedValue(false),
+        getUserIdsWithActivityOnDate: jest.fn().mockResolvedValue(new Set()),
         ...overrides,
     } as jest.Mocked<LearningRecordService>
 }
@@ -420,6 +468,17 @@ export function createMockEmailQueue(
 ): jest.Mocked<IEmailQueue> {
     return {
         enqueue: jest.fn(),
+        ...overrides,
+    }
+}
+
+/** IPushQueue mock */
+export function createMockPushQueue(
+    overrides?: Partial<jest.Mocked<IPushQueue>>
+): jest.Mocked<IPushQueue> {
+    return {
+        enqueue: jest.fn(),
+        enqueueBatch: jest.fn(),
         ...overrides,
     }
 }
@@ -598,16 +657,21 @@ export function createTestAssessment(
         status: AssessmentStatus
         retryCount: number
         scriptSnapshotContent: string
+        assessmentType: string
     }>
 ): Assessment {
     // 동적 import 없이 런타임에 Assessment 인스턴스 구성
     const { Assessment: AssessmentClass, AssessmentStatus: Status } =
         require("@features/assessment/domain/assessment.entity")
+    const { AssessmentType } = require("@shared/core/constants/api-contract")
     const assessment = new AssessmentClass()
     assessment.id = overrides?.id ?? 1
     assessment.audioUrl = overrides?.audioUrl ?? "test.wav"
     assessment.status = overrides?.status ?? Status.PENDING
     assessment.retryCount = overrides?.retryCount ?? 0
+    assessment.origin = "MOBILE"
+    assessment.referenceText = null
+    assessment.assessmentType = overrides?.assessmentType ?? AssessmentType.SCRIPT_READING
     if (overrides?.scriptSnapshotContent !== undefined) {
         assessment.scriptSnapshot = { content: overrides.scriptSnapshotContent }
     }
@@ -708,6 +772,8 @@ export function createMockLearningRecordRepository(
         findByUserId: jest.fn().mockResolvedValue({ items: [], total: 0 }),
         existsByReference: jest.fn().mockResolvedValue(false),
         findByReference: jest.fn().mockResolvedValue(null),
+        existsByDate: jest.fn().mockResolvedValue(false),
+        findUserIdsWithActivityOnDate: jest.fn().mockResolvedValue(new Set()),
         ...overrides,
     } as jest.Mocked<LearningRecordRepository>
 }
@@ -752,4 +818,575 @@ export function createMockChallengeParticipationRepository(
         findAllByChallenge: jest.fn().mockResolvedValue([]),
         ...overrides,
     } as jest.Mocked<ChallengeParticipationRepository>
+}
+
+/** SkillProfileCalculator mock */
+export function createMockSkillProfileCalculator(
+    overrides?: Partial<jest.Mocked<SkillProfileCalculator>>
+): jest.Mocked<SkillProfileCalculator> {
+    return {
+        computeSkillScores: jest.fn().mockReturnValue(new Map()),
+        findWeakestSkills: jest.fn().mockReturnValue([]),
+        ...overrides,
+    } as jest.Mocked<SkillProfileCalculator>
+}
+
+/** SkillProfileService mock */
+export function createMockSkillProfileService(
+    overrides?: Partial<jest.Mocked<SkillProfileService>>
+): jest.Mocked<SkillProfileService> {
+    return {
+        getSkillProfile: jest.fn().mockResolvedValue({
+            userId: 1,
+            scores: [],
+            overallAverage: 0,
+            weakestAreas: [],
+            strongestAreas: [],
+            lastUpdatedAt: new Date(),
+        }),
+        invalidateCache: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<SkillProfileService>
+}
+
+/** PronunciationErrorPatternRepository mock */
+export function createMockErrorPatternRepository(
+    overrides?: Partial<jest.Mocked<PronunciationErrorPatternRepository>>
+): jest.Mocked<PronunciationErrorPatternRepository> {
+    return {
+        findAll: jest.fn().mockResolvedValue([]),
+        findActive: jest.fn().mockResolvedValue([]),
+        findActiveByCategory: jest.fn().mockResolvedValue([]),
+        findById: jest.fn().mockResolvedValue(null),
+        findByCode: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        remove: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<PronunciationErrorPatternRepository>
+}
+
+/** UserErrorPatternRepository mock */
+export function createMockUserErrorPatternRepository(
+    overrides?: Partial<jest.Mocked<UserErrorPatternRepository>>
+): jest.Mocked<UserErrorPatternRepository> {
+    return {
+        findByUserId: jest.fn().mockResolvedValue([]),
+        findByUserAndPattern: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => e),
+        saveMany: jest.fn().mockImplementation(async (e) => e),
+        ...overrides,
+    } as jest.Mocked<UserErrorPatternRepository>
+}
+
+/** PhonemeScoreRepository mock */
+export function createMockPhonemeScoreRepository(
+    overrides?: Partial<jest.Mocked<PhonemeScoreRepository>>
+): jest.Mocked<PhonemeScoreRepository> {
+    return {
+        findByUserId: jest.fn().mockResolvedValue([]),
+        findWeakest: jest.fn().mockResolvedValue([]),
+        findByPhoneme: jest.fn().mockResolvedValue([]),
+        findOne: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => e),
+        saveMany: jest.fn().mockImplementation(async (e) => e),
+        getPhonemeHistory: jest.fn().mockResolvedValue([]),
+        ...overrides,
+    } as jest.Mocked<PhonemeScoreRepository>
+}
+
+/** MinimalPairRepository mock */
+export function createMockMinimalPairRepository(
+    overrides?: Partial<jest.Mocked<MinimalPairRepository>>
+): jest.Mocked<MinimalPairRepository> {
+    return {
+        findAll: jest.fn().mockResolvedValue([]),
+        findActive: jest.fn().mockResolvedValue([]),
+        findByContrastType: jest.fn().mockResolvedValue([]),
+        findByPhoneme: jest.fn().mockResolvedValue([]),
+        findById: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        remove: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<MinimalPairRepository>
+}
+
+/** PhonemeScoreService mock */
+export function createMockPhonemeScoreService(
+    overrides?: Partial<jest.Mocked<PhonemeScoreService>>
+): jest.Mocked<PhonemeScoreService> {
+    return {
+        getScoresByUser: jest.fn().mockResolvedValue([]),
+        getWeakPhonemes: jest.fn().mockResolvedValue([]),
+        getScoresByPhoneme: jest.fn().mockResolvedValue([]),
+        processAlignment: jest.fn(),
+        updateSingleScore: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<PhonemeScoreService>
+}
+
+/** MinimalPairService mock */
+export function createMockMinimalPairService(
+    overrides?: Partial<jest.Mocked<MinimalPairService>>
+): jest.Mocked<MinimalPairService> {
+    return {
+        getMinimalPairs: jest.fn().mockResolvedValue([]),
+        submitPractice: jest.fn().mockResolvedValue({ isCorrect: true, correctWord: "가", xpAwarded: 5 }),
+        ...overrides,
+    } as jest.Mocked<MinimalPairService>
+}
+
+/** SRSItemRepository mock */
+export function createMockSrsItemRepository(
+    overrides?: Partial<jest.Mocked<SRSItemRepository>>
+): jest.Mocked<SRSItemRepository> {
+    return {
+        findDueItems: jest.fn().mockResolvedValue([]),
+        findByUserAndItem: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockResolvedValue(null),
+        findByUserId: jest.fn().mockResolvedValue([]),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        countDueItems: jest.fn().mockResolvedValue(0),
+        countDueItemsBatch: jest.fn().mockResolvedValue(new Map()),
+        getStats: jest.fn().mockResolvedValue({ totalActive: 0, totalSuspended: 0, totalGraduated: 0, dueToday: 0 }),
+        ...overrides,
+    } as jest.Mocked<SRSItemRepository>
+}
+
+/** SrsService mock */
+export function createMockSrsService(
+    overrides?: Partial<jest.Mocked<SrsService>>
+): jest.Mocked<SrsService> {
+    return {
+        getTodayQueue: jest.fn().mockResolvedValue([]),
+        submitReview: jest.fn().mockResolvedValue({ id: 1, quality: 4, easeFactor: 2.5, interval: 3, nextReviewAt: new Date(), graduated: false, xpAwarded: 3 }),
+        getStats: jest.fn().mockResolvedValue({ totalActive: 0, totalSuspended: 0, totalGraduated: 0, dueToday: 0, estimatedMinutes: 0 }),
+        updateStatus: jest.fn(),
+        createOrUpdateItem: jest.fn(),
+        getSrsStats: jest.fn().mockResolvedValue({ totalActive: 0, totalSuspended: 0, totalGraduated: 0, dueToday: 0 }),
+        hasDueItems: jest.fn().mockResolvedValue(false),
+        getDueItemCount: jest.fn().mockResolvedValue(0),
+        getDueItemCountBatch: jest.fn().mockResolvedValue(new Map()),
+        ...overrides,
+    } as jest.Mocked<SrsService>
+}
+
+/** ISrsProvider mock — cross-feature Port 인터페이스 */
+export function createMockSrsProvider(
+    overrides?: Partial<jest.Mocked<ISrsProvider>>
+): jest.Mocked<ISrsProvider> {
+    return {
+        createOrUpdateItem: jest.fn(),
+        getSrsStats: jest.fn().mockResolvedValue({ totalActive: 0, totalSuspended: 0, totalGraduated: 0, dueToday: 0 }),
+        hasDueItems: jest.fn().mockResolvedValue(false),
+        getDueItemCount: jest.fn().mockResolvedValue(0),
+        getDueItemCountBatch: jest.fn().mockResolvedValue(new Map()),
+        ...overrides,
+    }
+}
+
+/** IPushNotificationSender mock */
+export function createMockPushNotificationSender(
+    overrides?: Partial<jest.Mocked<IPushNotificationSender>>
+): jest.Mocked<IPushNotificationSender> {
+    return {
+        sendToDevice: jest.fn().mockResolvedValue(true),
+        ...overrides,
+    }
+}
+
+/** DeviceTokenRepository mock */
+export function createMockDeviceTokenRepository(
+    overrides?: Partial<jest.Mocked<DeviceTokenRepository>>
+): jest.Mocked<DeviceTokenRepository> {
+    return {
+        findActiveByUserId: jest.fn().mockResolvedValue([]),
+        findByUserAndToken: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => e),
+        deactivateToken: jest.fn(),
+        removeByUserAndToken: jest.fn(),
+        findAllActiveUserIds: jest.fn().mockResolvedValue([]),
+        ...overrides,
+    } as jest.Mocked<DeviceTokenRepository>
+}
+
+/** IDeviceTokenReader mock — cross-feature Port 인터페이스 */
+export function createMockDeviceTokenReader(
+    overrides?: Partial<jest.Mocked<IDeviceTokenReader>>
+): jest.Mocked<IDeviceTokenReader> {
+    return {
+        findAllActiveUserIds: jest.fn().mockResolvedValue([]),
+        ...overrides,
+    }
+}
+
+/** NotificationPreferenceRepository mock */
+export function createMockNotificationPreferenceRepository(
+    overrides?: Partial<jest.Mocked<NotificationPreferenceRepository>>
+): jest.Mocked<NotificationPreferenceRepository> {
+    return {
+        findByUserId: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => e),
+        findOrCreate: jest.fn().mockImplementation(async (userId: number) => {
+            const { NotificationPreference } = require("@features/notification/domain/notification-preference.entity")
+            return NotificationPreference.createDefault(userId)
+        }),
+        ...overrides,
+    } as jest.Mocked<NotificationPreferenceRepository>
+}
+
+/** DeviceTokenService mock */
+export function createMockDeviceTokenService(
+    overrides?: Partial<jest.Mocked<DeviceTokenService>>
+): jest.Mocked<DeviceTokenService> {
+    return {
+        registerToken: jest.fn(),
+        removeToken: jest.fn(),
+        getActiveTokens: jest.fn().mockResolvedValue([]),
+        deactivateToken: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<DeviceTokenService>
+}
+
+/** NotificationPreferenceService mock */
+export function createMockNotificationPreferenceService(
+    overrides?: Partial<jest.Mocked<NotificationPreferenceService>>
+): jest.Mocked<NotificationPreferenceService> {
+    return {
+        getPreference: jest.fn().mockImplementation(async (userId: number) => {
+            const { NotificationPreference } = require("@features/notification/domain/notification-preference.entity")
+            return NotificationPreference.createDefault(userId)
+        }),
+        updatePreference: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<NotificationPreferenceService>
+}
+
+/** PushNotificationService mock */
+export function createMockPushNotificationService(
+    overrides?: Partial<jest.Mocked<PushNotificationService>>
+): jest.Mocked<PushNotificationService> {
+    return {
+        sendToUser: jest.fn().mockResolvedValue({ sent: 0, failed: 0 }),
+        ...overrides,
+    } as jest.Mocked<PushNotificationService>
+}
+
+/** WeeklyReportRepository mock */
+export function createMockWeeklyReportRepository(
+    overrides?: Partial<jest.Mocked<WeeklyReportRepository>>
+): jest.Mocked<WeeklyReportRepository> {
+    return {
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        findByUserAndWeek: jest.fn().mockResolvedValue(null),
+        findRecentByUser: jest.fn().mockResolvedValue([]),
+        ...overrides,
+    } as jest.Mocked<WeeklyReportRepository>
+}
+
+/** WeeklyReportService mock */
+export function createMockWeeklyReportService(
+    overrides?: Partial<jest.Mocked<WeeklyReportService>>
+): jest.Mocked<WeeklyReportService> {
+    return {
+        getReports: jest.fn().mockResolvedValue([]),
+        getReport: jest.fn().mockResolvedValue(null),
+        generateReport: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<WeeklyReportService>
+}
+
+/** ProgressDashboardService mock */
+
+/** ScenarioRepository mock */
+export function createMockScenarioRepository(
+    overrides?: Partial<jest.Mocked<ScenarioRepository>>
+): jest.Mocked<ScenarioRepository> {
+    return {
+        findById: jest.fn().mockResolvedValue(null),
+        findByIdLight: jest.fn().mockResolvedValue(null),
+        findActive: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        findAll: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        countCompletedByUser: jest.fn().mockResolvedValue(0),
+        ...overrides,
+    } as jest.Mocked<ScenarioRepository>
+}
+
+/** DialogueLineRepository mock */
+export function createMockDialogueLineRepository(
+    overrides?: Partial<jest.Mocked<DialogueLineRepository>>
+): jest.Mocked<DialogueLineRepository> {
+    return {
+        findByScenarioId: jest.fn().mockResolvedValue([]),
+        findById: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        saveMany: jest.fn().mockImplementation(async (e) => e),
+        remove: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<DialogueLineRepository>
+}
+
+/** ScenarioSessionRepository mock */
+export function createMockScenarioSessionRepository(
+    overrides?: Partial<jest.Mocked<ScenarioSessionRepository>>
+): jest.Mocked<ScenarioSessionRepository> {
+    return {
+        findById: jest.fn().mockResolvedValue(null),
+        findByIdLight: jest.fn().mockResolvedValue(null),
+        findByUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        findAbandonedBefore: jest.fn().mockResolvedValue([]),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        saveMany: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<ScenarioSessionRepository>
+}
+
+/** ScenarioLineResultRepository mock */
+export function createMockScenarioLineResultRepository(
+    overrides?: Partial<jest.Mocked<ScenarioLineResultRepository>>
+): jest.Mocked<ScenarioLineResultRepository> {
+    return {
+        findBySessionId: jest.fn().mockResolvedValue([]),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        ...overrides,
+    } as jest.Mocked<ScenarioLineResultRepository>
+}
+
+/** ScenarioAdminService mock */
+export function createMockScenarioAdminService(
+    overrides?: Partial<jest.Mocked<ScenarioAdminService>>
+): jest.Mocked<ScenarioAdminService> {
+    return {
+        getScenarios: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        getScenario: jest.fn(),
+        createScenario: jest.fn(),
+        updateScenario: jest.fn(),
+        deleteScenario: jest.fn(),
+        addLine: jest.fn(),
+        updateLine: jest.fn(),
+        deleteLine: jest.fn(),
+        reorderLines: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<ScenarioAdminService>
+}
+
+/** ScenarioService mock */
+export function createMockScenarioService(
+    overrides?: Partial<jest.Mocked<ScenarioService>>
+): jest.Mocked<ScenarioService> {
+    return {
+        getScenarios: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        getScenario: jest.fn(),
+        startSession: jest.fn(),
+        saveLineResult: jest.fn(),
+        completeSession: jest.fn(),
+        getSessionHistory: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        ...overrides,
+    } as jest.Mocked<ScenarioService>
+}
+
+/** BreathingExerciseRepository mock */
+export function createMockBreathingExerciseRepository(
+    overrides?: Partial<jest.Mocked<BreathingExerciseRepository>>
+): jest.Mocked<BreathingExerciseRepository> {
+    return {
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        findByUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        getStats: jest.fn().mockResolvedValue({ avg: 0, max: 0, min: 0, count: 0, trend: "stable" }),
+        getWeeklyTrends: jest.fn().mockResolvedValue([]),
+        getMultiTypeStats: jest.fn().mockResolvedValue([]),
+        ...overrides,
+    } as jest.Mocked<BreathingExerciseRepository>
+}
+
+/** TherapyProgressRepository mock */
+export function createMockTherapyProgressRepository(
+    overrides?: Partial<jest.Mocked<TherapyProgressRepository>>
+): jest.Mocked<TherapyProgressRepository> {
+    return {
+        findByUserId: jest.fn().mockResolvedValue(null),
+        findByUserIds: jest.fn().mockResolvedValue([]),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        ...overrides,
+    } as jest.Mocked<TherapyProgressRepository>
+}
+
+/** TherapySessionRepository mock */
+export function createMockTherapySessionRepository(
+    overrides?: Partial<jest.Mocked<TherapySessionRepository>>
+): jest.Mocked<TherapySessionRepository> {
+    return {
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        getSummary: jest.fn().mockResolvedValue({ totalSessions: 0, totalDuration: 0, byPhase: {}, dailyGoalProgress: 0 }),
+        getLastActivityDate: jest.fn().mockResolvedValue(null),
+        getLastActivityDates: jest.fn().mockResolvedValue(new Map()),
+        ...overrides,
+    } as jest.Mocked<TherapySessionRepository>
+}
+
+/** TherapyService mock */
+export function createMockTherapyService(
+    overrides?: Partial<jest.Mocked<TherapyService>>
+): jest.Mocked<TherapyService> {
+    return {
+        createBreathingExercise: jest.fn(),
+        getBreathingHistory: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        getBreathingStats: jest.fn().mockResolvedValue({ avg: 0, max: 0, min: 0, count: 0, trend: "stable" }),
+        getProgress: jest.fn(),
+        completePhase: jest.fn(),
+        createSession: jest.fn(),
+        getSessionSummary: jest.fn().mockResolvedValue({ totalSessions: 0, totalDuration: 0, byPhase: {} }),
+        createOralMotorExercise: jest.fn(),
+        getOralMotorHistory: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        getOralMotorStats: jest.fn().mockResolvedValue({ avg: 0, max: 0, min: 0, count: 0 }),
+        getClinicalNorms: jest.fn().mockResolvedValue([]),
+        compareWithNorms: jest.fn().mockResolvedValue([]),
+        getProgressionRules: jest.fn().mockResolvedValue([]),
+        checkPhaseAdvancement: jest.fn().mockResolvedValue({ advanced: false }),
+        aggregatePhaseMetrics: jest.fn().mockResolvedValue({}),
+        getBreathingTrends: jest.fn().mockResolvedValue([]),
+        getPhonemeTrends: jest.fn().mockResolvedValue([]),
+        getScoreTrends: jest.fn().mockResolvedValue([]),
+        getPhaseReadiness: jest.fn().mockResolvedValue({ currentPhase: "PHASE_0", nextPhase: "PHASE_1", metrics: {}, overallReadiness: 0 }),
+        ...overrides,
+    } as jest.Mocked<TherapyService>
+}
+
+/** TherapistClientRepository mock */
+export function createMockTherapistClientRepository(
+    overrides?: Partial<jest.Mocked<TherapistClientRepository>>
+): jest.Mocked<TherapistClientRepository> {
+    return {
+        findByTherapist: jest.fn().mockResolvedValue([]),
+        findTherapistsByClient: jest.fn().mockResolvedValue([]),
+        isLinked: jest.fn().mockResolvedValue(false),
+        findByLinkCode: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        remove: jest.fn(),
+        ...overrides,
+    } as jest.Mocked<TherapistClientRepository>
+}
+
+/** TherapistAssignmentRepository mock */
+export function createMockTherapistAssignmentRepository(
+    overrides?: Partial<jest.Mocked<TherapistAssignmentRepository>>
+): jest.Mocked<TherapistAssignmentRepository> {
+    return {
+        findByClient: jest.fn().mockResolvedValue([]),
+        findPendingByClient: jest.fn().mockResolvedValue([]),
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        ...overrides,
+    } as jest.Mocked<TherapistAssignmentRepository>
+}
+
+/** IPhonemeScoreReader mock */
+export function createMockPhonemeScoreReader(
+    overrides?: Partial<jest.Mocked<IPhonemeScoreReader>>
+): jest.Mocked<IPhonemeScoreReader> {
+    return {
+        getGlobalDifficultyByPosition: jest.fn().mockResolvedValue([]),
+        findByUserId: jest.fn().mockResolvedValue([]),
+        getPhonemeHistory: jest.fn().mockResolvedValue([]),
+        ...overrides,
+    } as jest.Mocked<IPhonemeScoreReader>
+}
+
+/** SlpDashboardService mock */
+export function createMockSlpDashboardService(
+    overrides?: Partial<jest.Mocked<SlpDashboardService>>
+): jest.Mocked<SlpDashboardService> {
+    return {
+        getPatientList: jest.fn().mockResolvedValue([]),
+        getPatientProgress: jest.fn().mockResolvedValue(null),
+        getPatientBreathingStats: jest.fn().mockResolvedValue({ avg: 0, max: 0, min: 0, count: 0, trend: "stable" }),
+        getPatientBreathingHistory: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        getPatientPhonemeScores: jest.fn().mockResolvedValue([]),
+        getPatientSessionSummary: jest.fn().mockResolvedValue({ totalSessions: 0, totalDuration: 0, byPhase: {} }),
+        generateLinkCode: jest.fn().mockResolvedValue("ABCD1234"),
+        linkClientByCode: jest.fn(),
+        createAssignment: jest.fn(),
+        getAssignments: jest.fn().mockResolvedValue([]),
+        getPatientBreathingTrends: jest.fn().mockResolvedValue([]),
+        getPatientPhonemeTrends: jest.fn().mockResolvedValue([]),
+        getPatientScoreTrends: jest.fn().mockResolvedValue([]),
+        getPatientPhaseReadiness: jest.fn().mockResolvedValue({ currentPhase: "PHASE_0", nextPhase: "PHASE_1", metrics: {}, overallReadiness: 0 }),
+        ...overrides,
+    } as jest.Mocked<SlpDashboardService>
+}
+
+/** OralMotorExerciseRepository mock */
+export function createMockOralMotorExerciseRepository(
+    overrides?: Partial<jest.Mocked<OralMotorExerciseRepository>>
+): jest.Mocked<OralMotorExerciseRepository> {
+    return {
+        save: jest.fn().mockImplementation(async (e) => ({ ...e, id: e.id ?? 1 })),
+        findByUser: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+        getStats: jest.fn().mockResolvedValue({ avg: 0, max: 0, min: 0, count: 0 }),
+        ...overrides,
+    } as jest.Mocked<OralMotorExerciseRepository>
+}
+
+/** ClinicalNormRepository mock */
+export function createMockClinicalNormRepository(
+    overrides?: Partial<jest.Mocked<ClinicalNormRepository>>
+): jest.Mocked<ClinicalNormRepository> {
+    return {
+        findActive: jest.fn().mockResolvedValue([]),
+        findByCategory: jest.fn().mockResolvedValue([]),
+        findByCategoryAndMetric: jest.fn().mockResolvedValue(null),
+        save: jest.fn().mockImplementation(async (e) => e),
+        saveMany: jest.fn().mockImplementation(async (e) => e),
+        ...overrides,
+    } as jest.Mocked<ClinicalNormRepository>
+}
+
+/** PhaseProgressionRuleRepository mock */
+export function createMockPhaseProgressionRuleRepository(
+    overrides?: Partial<jest.Mocked<PhaseProgressionRuleRepository>>
+): jest.Mocked<PhaseProgressionRuleRepository> {
+    return {
+        findActiveRules: jest.fn().mockResolvedValue([]),
+        findRulesForTransition: jest.fn().mockResolvedValue([]),
+        save: jest.fn().mockImplementation(async (e) => e),
+        saveMany: jest.fn().mockImplementation(async (e) => e),
+        ...overrides,
+    } as jest.Mocked<PhaseProgressionRuleRepository>
+}
+
+/** IAssessmentStatsProvider mock */
+export function createMockAssessmentStatsProvider(
+    overrides?: Partial<jest.Mocked<IAssessmentStatsProvider>>
+): jest.Mocked<IAssessmentStatsProvider> {
+    return {
+        findByIdLight: jest.fn().mockResolvedValue(null),
+        getScriptProgress: jest.fn().mockResolvedValue({ completedScriptIds: [], bestScores: {}, lastPracticedAt: {} }),
+        getStatsByUserId: jest.fn().mockResolvedValue({ totalLessons: 0, completedLessons: 0, averageScore: 0, totalPracticeSeconds: 0 }),
+        getTodayCompletedCount: jest.fn().mockResolvedValue(0),
+        getWeeklyActivity: jest.fn().mockResolvedValue([]),
+        hasScoreAbove: jest.fn().mockResolvedValue(false),
+        findTodayCompletedByUser: jest.fn().mockResolvedValue([]),
+        getScoresByArticulationPlace: jest.fn().mockResolvedValue([]),
+        getScoreTrends: jest.fn().mockResolvedValue([]),
+        ...overrides,
+    } as jest.Mocked<IAssessmentStatsProvider>
+}
+
+/** TherapyRecommendationService mock */
+export function createMockTherapyRecommendationService(
+    overrides?: Partial<jest.Mocked<TherapyRecommendationService>>
+): jest.Mocked<TherapyRecommendationService> {
+    return {
+        getRecommendations: jest.fn().mockResolvedValue([]),
+        ...overrides,
+    } as jest.Mocked<TherapyRecommendationService>
+}
+
+/** IConsecutiveErrorTracker mock */
+export function createMockConsecutiveErrorTracker(
+    overrides?: Partial<jest.Mocked<IConsecutiveErrorTracker>>
+): jest.Mocked<IConsecutiveErrorTracker> {
+    return {
+        trackAndAlert: jest.fn(),
+        ...overrides,
+    }
 }

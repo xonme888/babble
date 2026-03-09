@@ -37,7 +37,7 @@ describe("AuthRedisKeys (Redis 키 빌더)", () => {
 
     describe("CLIENT_TYPES", () => {
         it("mobile과 admin을 포함한다", () => {
-            expect(CLIENT_TYPES).toEqual(["mobile", "admin"])
+            expect(CLIENT_TYPES).toEqual(["mobile", "admin", "therapy"])
         })
 
         it("읽기 전용 배열이다", () => {

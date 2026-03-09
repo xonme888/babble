@@ -9,15 +9,17 @@ import { initializeTransactionalContext } from "typeorm-transactional"
 
 import { User } from "@features/user/domain/user.entity"
 import { Assessment } from "@features/assessment/domain/assessment.entity"
-import { Script } from "@features/script/domain/script.entity"
-import { UserGoalLog } from "@features/user/domain/user-goal-log.entity"
-import { Chapter } from "@features/script/domain/chapter.entity"
 import { AssessmentAnalysisLog } from "@features/assessment/domain/assessment-analysis-log.entity"
-import { NotificationLog } from "@features/notification/domain/notification-log.entity"
+import { Script } from "@features/script/domain/script.entity"
+import { Chapter } from "@features/script/domain/chapter.entity"
 import { ContentVersion } from "@features/script/domain/content-version.entity"
+import { UserGoalLog } from "@features/user/domain/user-goal-log.entity"
+import { NotificationLog } from "@features/notification/domain/notification-log.entity"
 import { LearningRecord } from "@features/learning/domain/learning-record.entity"
 import { DailyGoalLog } from "@features/learning/domain/daily-goal-log.entity"
 import { GameSession } from "@features/game/domain/game-session.entity"
+import { DailyChallenge } from "@features/game/domain/daily-challenge.entity"
+import { ChallengeParticipation } from "@features/game/domain/challenge-participation.entity"
 import { GameScriptCompletion } from "@features/game/domain/game-script-completion.entity"
 import { GameWordResult } from "@features/game/domain/game-word-result.entity"
 import { XpTransaction } from "@features/gamification/domain/xp-transaction.entity"
@@ -26,6 +28,18 @@ import { Badge } from "@features/gamification/domain/badge.entity"
 import { UserBadge } from "@features/gamification/domain/user-badge.entity"
 import { GameConfig } from "@features/gamification/domain/game-config.entity"
 import { GameConfigHistory } from "@features/gamification/domain/game-config-history.entity"
+import { PhonemeScore } from "@features/phoneme/domain/phoneme-score.entity"
+import { PronunciationErrorPattern } from "@features/phoneme/domain/pronunciation-error-pattern.entity"
+import { UserErrorPattern } from "@features/phoneme/domain/user-error-pattern.entity"
+import { MinimalPair } from "@features/phoneme/domain/minimal-pair.entity"
+import { SRSItem } from "@features/srs/domain/srs-item.entity"
+import { DeviceToken } from "@features/notification/domain/device-token.entity"
+import { NotificationPreference } from "@features/notification/domain/notification-preference.entity"
+import { WeeklyReport } from "@features/weekly-report/domain/weekly-report.entity"
+import { Scenario } from "@features/scenario/domain/scenario.entity"
+import { DialogueLine } from "@features/scenario/domain/dialogue-line.entity"
+import { ScenarioSession } from "@features/scenario/domain/scenario-session.entity"
+import { ScenarioLineResult } from "@features/scenario/domain/scenario-line-result.entity"
 
 
 let transactionalContextInitialized = false
@@ -75,15 +89,17 @@ export async function initializeTestApp(): Promise<Express> {
             entities: [
                 User,
                 Assessment,
+                AssessmentAnalysisLog,
                 Script,
                 Chapter,
-                UserGoalLog,
-                AssessmentAnalysisLog,
-                NotificationLog,
                 ContentVersion,
+                UserGoalLog,
+                NotificationLog,
                 LearningRecord,
                 DailyGoalLog,
                 GameSession,
+                DailyChallenge,
+                ChallengeParticipation,
                 GameScriptCompletion,
                 GameWordResult,
                 XpTransaction,
@@ -92,6 +108,18 @@ export async function initializeTestApp(): Promise<Express> {
                 UserBadge,
                 GameConfig,
                 GameConfigHistory,
+                PhonemeScore,
+                PronunciationErrorPattern,
+                UserErrorPattern,
+                MinimalPair,
+                SRSItem,
+                DeviceToken,
+                NotificationPreference,
+                WeeklyReport,
+                Scenario,
+                DialogueLine,
+                ScenarioSession,
+                ScenarioLineResult,
             ],
             migrationsRun: false, // 테스트는 synchronize()로 스키마 생성 — 마이그레이션 불필요
             synchronize: false, // initialize()에서 동기화 방지 — DROP SCHEMA 후 수동 실행
