@@ -11,6 +11,9 @@ import { TraceContext } from "@shared/infra/logging/trace-context"
 import { IRedisService } from "@shared/core/redis-service.interface"
 import { ServiceUnavailableException } from "@shared/core/exceptions/infrastructure-exceptions"
 import { REDIS_QUEUE_DB } from "@shared/core/constants/redis.constants"
+import { AnalysisType } from "@shared/core/queue.interface"
+import type { AnalysisJobData, ScriptAnalysisJobData, WordAnalysisJobData } from "@shared/core/queue.interface"
+import { assertNever } from "@shared/core/assert-never"
 
 const config = configurations()
 
@@ -40,46 +43,91 @@ export const createAnalysisWorker = () => {
             try {
                 await ensureDatasource()
 
-                const { assessmentId, audioUrl, scriptContent } = job.data
+                const data = job.data as AnalysisJobData
+                const { assessmentId, audioUrl } = data
 
-                if (!assessmentId || !audioUrl || !scriptContent) {
+                // 하위호환: 배포 시 큐 잔류 기존 메시지에 analysisType 없을 수 있음
+                const analysisType = data.analysisType ?? AnalysisType.SCRIPT
+
+                if (!assessmentId || !audioUrl) {
                     logger.error(
                         `[AnalysisWorker] Job ${job.id} 필수 데이터 누락: ` +
-                        `assessmentId=${assessmentId}, audioUrl=${!!audioUrl}, scriptContent=${!!scriptContent}`
+                        `assessmentId=${assessmentId}, audioUrl=${!!audioUrl}`
                     )
                     return
                 }
 
-                const assessmentRepo = container.resolve(AssessmentRepository)
+                let script: string
+                let taskType: string
 
-                await TraceContext.run(`analysis-job-${job.id}`, async () => {
-                    logger.info(`[AnalysisWorker] Processing Assessment ${assessmentId}`)
+                switch (analysisType) {
+                    case AnalysisType.SCRIPT:
+                        if (!(data as ScriptAnalysisJobData).scriptContent) {
+                            logger.error(
+                                `[AnalysisWorker] Job ${job.id} SCRIPT 분석에 scriptContent 누락`
+                            )
+                            return
+                        }
+                        script = (data as ScriptAnalysisJobData).scriptContent
+                        taskType = "ASSESSMENT"
+                        break
+                    case AnalysisType.WORD:
+                        if (!(data as WordAnalysisJobData).scriptContent) {
+                            logger.error(
+                                `[AnalysisWorker] Job ${job.id} WORD 분석에 scriptContent 누락`
+                            )
+                            return
+                        }
+                        script = (data as WordAnalysisJobData).scriptContent
+                        taskType = "WORD_PRACTICE"
+                        break
+                    case AnalysisType.BREATHING:
+                        script = ""
+                        taskType = "BREATHING_ASSESSMENT"
+                        break
+                    case AnalysisType.FREE_SPEECH:
+                        script = ""
+                        taskType = "DIARY_ANALYSIS"
+                        break
+                    default:
+                        assertNever(analysisType)
+                }
 
-                    const assessment = await assessmentRepo.findById(assessmentId)
-                    if (!assessment) {
-                        logger.error(
-                            `[AnalysisWorker] Assessment ${assessmentId} not found`
-                        )
-                        return
-                    }
+                const traceId = data.traceId
+                await TraceContext.run(traceId ?? `analysis-job-${job.id}`, async () => {
+                    logger.info(`[AnalysisWorker] Processing ${taskType} ${assessmentId}`)
 
-                    if (assessment.status !== AssessmentStatus.ANALYZING) {
-                        assessment.startAnalysis()
-                        await assessmentRepo.save(assessment)
+                    // Assessment 엔티티 기반 분석만 상태 전이 (음성 일기/호흡 평가는 별도 엔티티)
+                    const NON_ASSESSMENT_TYPES = new Set([AnalysisType.FREE_SPEECH, AnalysisType.BREATHING])
+                    if (!NON_ASSESSMENT_TYPES.has(analysisType)) {
+                        const assessmentRepo = container.resolve(AssessmentRepository)
+                        const assessment = await assessmentRepo.findById(assessmentId)
+                        if (!assessment) {
+                            logger.error(
+                                `[AnalysisWorker] Assessment ${assessmentId} not found`
+                            )
+                            return
+                        }
+
+                        if (assessment.status !== AssessmentStatus.ANALYZING) {
+                            assessment.startAnalysis()
+                            await assessmentRepo.save(assessment)
+                        }
                     }
 
                     const taskData = {
                         jobId: job.id,
-                        assessmentId: assessmentId,
-                        audioUrl: audioUrl,
-                        script: scriptContent,
+                        assessmentId,
+                        audioUrl,
+                        script,
+                        type: taskType,
                         traceId: TraceContext.getTraceId(),
                     }
 
                     await pushTaskToRedis(redisService, taskData, assessmentId, logger)
 
                     logger.info(
-                        `[AnalysisWorker] Task successfully delegated for Assessment ${assessmentId}. BullMQ job completed.`
+                        `[AnalysisWorker] Task successfully delegated for ${taskType} ${assessmentId}. BullMQ job completed.`
                     )
                 })
             } catch (fatalError: unknown) {
@@ -126,10 +174,20 @@ export const createAnalysisWorker = () => {
 
         try {
             await ensureDatasource()
-            const assessmentRepo = container.resolve(AssessmentRepository)
-            const { assessmentId } = job.data
+            const data = job.data as AnalysisJobData
+            const { assessmentId } = data
             if (!assessmentId) return
 
+            // 비-Assessment 엔티티 최종 실패 — Assessment 상태 전이 불필요
+            const analysisType = data.analysisType ?? AnalysisType.SCRIPT
+            if (analysisType === AnalysisType.FREE_SPEECH || analysisType === AnalysisType.BREATHING) {
+                logger.error(
+                    `[AnalysisWorker] ${analysisType} ${assessmentId} 최종 실패: ${err.message}`
+                )
+                return
+            }
+
+            const assessmentRepo = container.resolve(AssessmentRepository)
             const assessment = await assessmentRepo.findByIdLight(assessmentId)
             if (!assessment) return
 

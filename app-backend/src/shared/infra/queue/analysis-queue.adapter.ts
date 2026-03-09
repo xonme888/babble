@@ -2,6 +2,7 @@ import { injectable } from "tsyringe"
 import { IAnalysisQueue, AnalysisJobData, AnalysisJobOptions } from "@shared/core/queue.interface"
 import { assessmentAnalysisQueue } from "./analysis.queue"
 import { configurations } from "../config/configurations"
+import { TraceContext } from "../logging/trace-context"
 
 /**
  * BullMQ 기반 AI 분석 큐 어댑터
@@ -15,7 +16,10 @@ export class AnalysisQueueAdapter implements IAnalysisQueue {
         const config = configurations()
         const isRetryJob = options?.jobId?.includes("-retry-")
 
-        await assessmentAnalysisQueue.add("analyze", data, {
+        await assessmentAnalysisQueue.add("analyze", {
+            ...data,
+            traceId: TraceContext.getTraceId(),
+        }, {
             jobId: options?.jobId,
             delay: options?.delay,
             // 최초 분석: defaultJobOptions(attempts=3, exponential backoff) 적용

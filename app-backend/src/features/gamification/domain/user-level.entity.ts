@@ -15,7 +15,7 @@ import type { User } from "@features/user/domain/user.entity"
  * UserLevel Entity
  * 사용자의 현재 레벨 및 누적 XP
  */
-@Entity("user_levels")
+@Entity("gmf_user_levels")
 @Index(["userId"], { unique: true })
 // BaseAuditEntity 미상속: createdAt 없이 updatedAt만 사용하는 특수 구조
 export class UserLevel {
@@ -29,7 +29,7 @@ export class UserLevel {
     userId: number
 
     @ManyToOne("User", { onDelete: "CASCADE" })
-    @JoinColumn({ name: "userId" })
+    @JoinColumn()
     user: User | null
 
     // 낙관적 잠금 — 동시 XP 부여 경합 방지

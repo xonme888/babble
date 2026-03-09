@@ -4,7 +4,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 
  * GameConfigHistory Entity
  * GameConfig 변경 이력 추적
  */
-@Entity("game_config_history")
+@Entity("gmf_config_histories")
 @Index(["configId"])
 @Index(["changedAt"])
 export class GameConfigHistory {

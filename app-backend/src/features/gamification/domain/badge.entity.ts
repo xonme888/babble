@@ -16,7 +16,7 @@ export enum BadgeCategory {
  * Badge Entity
  * 뱃지 정의 (시스템에서 관리하는 마스터 데이터)
  */
-@Entity("badges")
+@Entity("gmf_badges")
 export class Badge extends BaseCreatedEntity {
     // 예: "STREAK_7"
     @Column({ length: 50, unique: true })

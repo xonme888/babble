@@ -17,22 +17,26 @@ export enum XpSource {
     DAILY_GOAL = "DAILY_GOAL",
     STREAK_BONUS = "STREAK_BONUS",
     CHALLENGE = "CHALLENGE",
+    SCENARIO = "SCENARIO",
+    PHONEME_DRILL = "PHONEME_DRILL",
+    SRS_REVIEW = "SRS_REVIEW",
+    VOICE_DIARY = "VOICE_DIARY",
 }
 
 /**
  * XpTransaction Entity
  * XP 획득 이력 추적
  */
-@Entity("xp_transactions")
+@Entity("gmf_xp_transactions")
 @Index(["userId"])
 @Index(["userId", "createdAt"])
-@Index(["userId", "source", "referenceId"], { unique: true, where: '"referenceId" IS NOT NULL' })
+@Index(["userId", "source", "referenceId"], { unique: true, where: '"reference_id" IS NOT NULL' })
 export class XpTransaction extends BaseCreatedEntity {
     @Column()
     userId: number
 
     @ManyToOne("User", { onDelete: "CASCADE" })
-    @JoinColumn({ name: "userId" })
+    @JoinColumn()
     user: User
 
     // XP 양 (양수)

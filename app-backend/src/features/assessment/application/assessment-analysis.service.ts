@@ -1,10 +1,13 @@
 import { injectable, inject } from "tsyringe"
 import { Script } from "@features/script/domain/script.entity"
+import { Assessment } from "../domain/assessment.entity"
 import { AssessmentRepository } from "../infrastructure/assessment.repository"
-import { IAnalysisQueue } from "@shared/core/queue.interface"
+import { IAnalysisQueue, AnalysisType } from "@shared/core/queue.interface"
+import type { AnalysisJobData } from "@shared/core/queue.interface"
 import { ILogger } from "@shared/core/logger.interface"
 import { IDomainEventDispatcher } from "@shared/core/domain-event-dispatcher.interface"
 import { DI_TOKENS } from "@shared/core/di-tokens"
+import { AssessmentType } from "@shared/core/constants/api-contract"
 
 /**
  * Assessment Analysis Service
@@ -31,21 +34,11 @@ export class AssessmentAnalysisService {
         const assessment = await this.assessmentRepository.findByIdOrThrow(assessmentId)
 
         try {
-            // Script 텍스트 준비
-            const scriptText = assessment.scriptSnapshot?.content ?? assessment.script?.content ?? ""
-            const sanitizedScript = Script.sanitize(scriptText)
+            const jobData = this.buildJobData(assessment)
 
-            // 큐에 분석 작업 추가
-            await this.analysisQueue.enqueue(
-                {
-                    assessmentId: assessment.id,
-                    audioUrl: assessment.audioUrl,
-                    scriptContent: sanitizedScript,
-                },
-                {
-                    jobId: `assessment-${assessment.id}-${assessment.retryCount}`,
-                }
-            )
+            await this.analysisQueue.enqueue(jobData, {
+                jobId: `assessment-${assessment.id}-${assessment.retryCount}`,
+            })
 
             this.logger.info(
                 `[AssessmentAnalysisService] Successfully queued Assessment ${assessmentId}`
@@ -56,15 +49,12 @@ export class AssessmentAnalysisService {
                 error
             )
 
-            // 큐 추가 실패 시 상태 업데이트
             assessment.failAnalysis(`Queue error: ${error instanceof Error ? error.message : String(error)}`)
             await this.assessmentRepository.save(assessment)
 
-            // 이벤트 발행
             await this.eventDispatcher.dispatchAll(assessment.getDomainEvents())
             assessment.clearDomainEvents()
 
-            // 호출자에게 에러 전파 — 사용자가 거짓 성공 응답을 받지 않도록
             throw error
         }
     }
@@ -83,23 +73,50 @@ export class AssessmentAnalysisService {
             return
         }
 
-        const scriptText = assessment.scriptSnapshot?.content ?? assessment.script?.content ?? ""
-        const sanitizedScript = Script.sanitize(scriptText)
+        const jobData = this.buildJobData(assessment)
 
-        await this.analysisQueue.enqueue(
-            {
-                assessmentId: assessment.id,
-                audioUrl: assessment.audioUrl,
-                scriptContent: sanitizedScript,
-            },
-            {
-                jobId: `assessment-${assessment.id}-retry-${assessment.retryCount}`,
-                delay: delayMs,
-            }
-        )
+        await this.analysisQueue.enqueue(jobData, {
+            jobId: `assessment-${assessment.id}-retry-${assessment.retryCount}`,
+            delay: delayMs,
+        })
 
         this.logger.info(
             `[AssessmentAnalysisService] Scheduled retry for Assessment ${assessmentId} in ${delayMs}ms`
         )
+    }
+
+    /** assessmentType + scriptContent로 AI 분석 유형을 결정하고 큐 데이터를 구성 */
+    private buildJobData(assessment: Assessment): AnalysisJobData {
+        const scriptText = assessment.scriptSnapshot?.content
+            ?? assessment.referenceText
+            ?? assessment.script?.content
+            ?? ""
+        const sanitizedScript = Script.sanitize(scriptText)
+
+        // WORD_PRACTICE는 전용 경량 파이프라인 사용
+        if (assessment.assessmentType === AssessmentType.WORD_PRACTICE) {
+            return {
+                analysisType: AnalysisType.WORD,
+                assessmentId: assessment.id,
+                audioUrl: assessment.audioUrl,
+                scriptContent: sanitizedScript,
+            }
+        }
+
+        // 스크립트 유무로 SCRIPT/FREE_SPEECH 분기
+        if (sanitizedScript) {
+            return {
+                analysisType: AnalysisType.SCRIPT,
+                assessmentId: assessment.id,
+                audioUrl: assessment.audioUrl,
+                scriptContent: sanitizedScript,
+            }
+        }
+
+        return {
+            analysisType: AnalysisType.FREE_SPEECH,
+            assessmentId: assessment.id,
+            audioUrl: assessment.audioUrl,
+        }
     }
 }

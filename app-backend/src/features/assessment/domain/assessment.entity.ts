@@ -8,14 +8,24 @@ import {
 import { SafeVersionColumn } from "@shared/core/decorators/safe-version-column"
 import type { User } from "@features/user/domain/user.entity"
 import type { Script } from "@features/script/domain/script.entity"
+import type { ScenarioSession } from "@features/scenario/domain/scenario-session.entity"
 import { AggregateRoot } from "@shared/core/aggregate-root"
 import { ValidationException } from "@shared/core/exceptions/domain-exceptions"
+import { AssessmentOrigin, AssessmentType } from "@shared/core/constants/api-contract"
+import type { AssessmentOriginType, AssessmentTypeType } from "@shared/core/constants/api-contract"
 import { AssessmentCreatedEvent } from "./events/assessment-created.event"
 import { AssessmentAnalyzingEvent } from "./events/assessment-analyzing.event"
 import { AssessmentCompletedEvent } from "./events/assessment-completed.event"
 import { AssessmentFailedEvent } from "./events/assessment-failed.event"
 import type { IAnalysisFeedback } from "./analysis-feedback.interface"
-import type { AIAnalysisResult } from "./ai-analysis-result.interface"
+import type {
+    AIAnalysisResult,
+    IFluencyDetail,
+    IVoiceQuality,
+    IMonotoneDetail,
+    IStutteringDetail,
+} from "./ai-analysis-result.interface"
+import { toDomainAnalysisResult } from "./ai-analysis-result.interface"
 
 export enum AssessmentStatus {
     PENDING = "PENDING", // 업로드 완료, 분석 대기
@@ -33,7 +43,7 @@ export enum AssessmentStatus {
  * - AI 분석 결과 저장
  * - Domain Events 발행 (이벤트 기반 아키텍처)
  */
-@Entity("assessments")
+@Entity("asm_assessments")
 @Index(["userId"])
 @Index(["status"])
 @Index(["createdAt"])
@@ -66,7 +76,7 @@ export class Assessment extends AggregateRoot {
     transcribedText: string // AI가 transcribe한 텍스트
 
     @ManyToOne("Script", { onDelete: "SET NULL" })
-    @JoinColumn({ name: "scriptId" })
+    @JoinColumn()
     script: Script
 
     @Column({ type: "int", nullable: true })
@@ -99,32 +109,80 @@ export class Assessment extends AggregateRoot {
     @Column({ type: "float", nullable: true })
     speakingRate: number | null // 말하기 속도 (Syllables Per Minute)
 
+    @Column({ type: "float", nullable: true })
+    fluencyScore: number | null // 유창성 종합 점수 (0~100)
+
+    @Column({ type: "simple-json", nullable: true })
+    fluencyDetail: IFluencyDetail | null // 유창성 상세 (pause, stability, intonation)
+
+    @Column({ type: "simple-json", nullable: true })
+    voiceQuality: IVoiceQuality | null // 음질 (HNR, Jitter, Shimmer)
+
+    @Column({ type: "simple-json", nullable: true })
+    monotone: IMonotoneDetail | null // 단음조 (F0 변동성)
+
+    @Column({ type: "simple-json", nullable: true })
+    stuttering: IStutteringDetail | null // 말더듬 (반복/연장/블록)
+
     // 스크립트 스냅샷 (삭제 대비 — 생성 시점 스크립트 정보 보존)
     @Column({ type: "simple-json", nullable: true })
     scriptSnapshot: { title: string; content: string; difficulty: string } | null
 
+    @Column({
+        type: "simple-enum",
+        enum: ["MOBILE", "THERAPY", "GUEST"],
+        default: AssessmentOrigin.MOBILE,
+    })
+    origin: AssessmentOriginType
+
+    @Column({ type: "text", nullable: true })
+    referenceText: string | null
+
+    @Column({
+        type: "simple-enum",
+        enum: ["SCRIPT_READING", "MINIMAL_PAIR", "SCENARIO_LINE", "WORD_PRACTICE", "FREE_SPEECH"],
+        default: AssessmentType.SCRIPT_READING,
+    })
+    assessmentType: AssessmentTypeType
+
 
     @ManyToOne("User", { onDelete: "CASCADE", nullable: true })
-    @JoinColumn({ name: "userId" })
+    @JoinColumn()
     user: User
 
-    @Column({ nullable: true })
+    @Column({ type: "int", nullable: true })
     userId: number | null
+
+
+    @ManyToOne("ScenarioSession", { nullable: true, onDelete: "SET NULL" })
+    @JoinColumn()
+    scenarioSession: ScenarioSession
+
+    @Column({ type: "int", nullable: true })
+    scenarioSessionId: number | null
 
 
     static create(
         userId: number,
         audioUrl: string,
         duration: number,
-        scriptId?: number
+        scriptId?: number,
+        scenarioSessionId?: number,
+        origin?: AssessmentOriginType,
+        referenceText?: string,
+        assessmentType?: AssessmentTypeType,
     ): Assessment {
         const assessment = new Assessment()
         assessment.userId = userId
         assessment.audioUrl = audioUrl
         assessment.duration = duration
         assessment.scriptId = scriptId ?? null
+        assessment.scenarioSessionId = scenarioSessionId ?? null
         assessment.status = AssessmentStatus.PENDING
         assessment.retryCount = 0
+        assessment.origin = origin ?? AssessmentOrigin.MOBILE
+        assessment.referenceText = referenceText ?? null
+        assessment.assessmentType = assessmentType ?? AssessmentType.SCRIPT_READING
 
         return assessment
     }
@@ -172,6 +230,11 @@ export class Assessment extends AggregateRoot {
         feedback: IAnalysisFeedback
         pitchData?: { t: number; f0: number }[]
         speakingRate?: number
+        fluencyScore?: number | null
+        fluencyDetail?: IFluencyDetail | null
+        voiceQuality?: IVoiceQuality | null
+        monotone?: IMonotoneDetail | null
+        stuttering?: IStutteringDetail | null
     }): void {
         if (this.status !== AssessmentStatus.ANALYZING) {
             throw new ValidationException(
@@ -187,11 +250,16 @@ export class Assessment extends AggregateRoot {
         this.feedback = result.feedback
         this.pitchData = result.pitchData ?? null
         this.speakingRate = result.speakingRate ?? null
+        this.fluencyScore = result.fluencyScore ?? null
+        this.fluencyDetail = result.fluencyDetail ?? null
+        this.voiceQuality = result.voiceQuality ?? null
+        this.monotone = result.monotone ?? null
+        this.stuttering = result.stuttering ?? null
         this.lastError = null
 
         // Domain Event 발행
         this.addDomainEvent(
-            new AssessmentCompletedEvent(this.id, this.userId, result.score, result.transcribedText)
+            new AssessmentCompletedEvent(this.id, this.userId, result.score, result.transcribedText, this.scriptId, this.origin, this.assessmentType)
         )
     }
 
@@ -246,17 +314,18 @@ export class Assessment extends AggregateRoot {
             this.failAnalysis(result.message || "AI analysis failed")
             return
         }
+        const domain = toDomainAnalysisResult(result)
         this.completeAnalysis({
-            score: result.score ?? 0,
-            transcribedText: result.transcribed_text ?? "",
-            feedback: {
-                similarity: result.similarity,
-                alignment: result.alignment,
-                fa_score: result.fa_score,
-                phoneme_accuracy: result.phoneme_accuracy,
-            },
-            pitchData: result.pitch_data,
-            speakingRate: result.speaking_rate,
+            score: domain.score,
+            transcribedText: domain.transcribedText,
+            feedback: domain.feedback,
+            pitchData: domain.pitchData,
+            speakingRate: domain.speakingRate,
+            fluencyScore: domain.fluencyScore,
+            fluencyDetail: domain.fluencyDetail,
+            voiceQuality: domain.voiceQuality,
+            monotone: domain.monotone,
+            stuttering: domain.stuttering,
         })
     }
 

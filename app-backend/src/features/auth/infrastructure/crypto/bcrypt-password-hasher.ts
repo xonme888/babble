@@ -1,7 +1,8 @@
 import * as bcrypt from "bcryptjs"
 import { injectable, inject } from "tsyringe"
 import { IPasswordHasher } from "@shared/core/password-hasher.interface"
-import { ConfigService } from "@shared/infra/config/config.service"
+import { DI_TOKENS } from "@shared/core/di-tokens"
+import type { IConfigService } from "@shared/core/config.interface"
 
 /**
  * Bcrypt 기반 패스워드 해시 구현체 (Auth Domain Infrastructure)
@@ -10,7 +11,7 @@ import { ConfigService } from "@shared/infra/config/config.service"
 export class BcryptPasswordHasher implements IPasswordHasher {
     private readonly rounds: number
 
-    constructor(@inject(ConfigService) configService: ConfigService) {
+    constructor(@inject(DI_TOKENS.IConfigService) configService: IConfigService) {
         this.rounds = configService.config.bcrypt.rounds
     }
 

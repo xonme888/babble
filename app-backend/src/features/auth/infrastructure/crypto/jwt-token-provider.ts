@@ -2,7 +2,8 @@ import { injectable, inject } from "tsyringe"
 import * as jwt from "jsonwebtoken"
 import { randomUUID } from "crypto"
 import { ITokenProvider, TokenVerifyResult } from "../../domain/token-provider.interface"
-import { ConfigService } from "@shared/infra/config/config.service"
+import { DI_TOKENS } from "@shared/core/di-tokens"
+import type { IConfigService } from "@shared/core/config.interface"
 
 /**
  * JWT 기반 토큰 제공자 구현체 (Auth Domain Infrastructure)
@@ -14,7 +15,7 @@ export class JwtTokenProvider implements ITokenProvider {
     private readonly accessTokenExpiry: string
     private readonly refreshTokenExpiry: string
 
-    constructor(@inject(ConfigService) private configService: ConfigService) {
+    constructor(@inject(DI_TOKENS.IConfigService) private configService: IConfigService) {
         const jwtConfig = this.configService.config.jwt
         this.secret = jwtConfig.secret
         this.refreshSecret = jwtConfig.refreshSecret

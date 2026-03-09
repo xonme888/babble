@@ -26,8 +26,35 @@ import { Badge } from "@features/gamification/domain/badge.entity"
 import { UserBadge } from "@features/gamification/domain/user-badge.entity"
 import { GameConfig } from "@features/gamification/domain/game-config.entity"
 import { GameConfigHistory } from "@features/gamification/domain/game-config-history.entity"
+import { PhonemeScore } from "@features/phoneme/domain/phoneme-score.entity"
+import { PronunciationErrorPattern } from "@features/phoneme/domain/pronunciation-error-pattern.entity"
+import { UserErrorPattern } from "@features/phoneme/domain/user-error-pattern.entity"
+import { MinimalPair } from "@features/phoneme/domain/minimal-pair.entity"
+import { DiscriminationSession } from "@features/phoneme/domain/discrimination-session.entity"
+import { SRSItem } from "@features/srs/domain/srs-item.entity"
+import { DeviceToken } from "@features/notification/domain/device-token.entity"
+import { NotificationPreference } from "@features/notification/domain/notification-preference.entity"
+import { WeeklyReport } from "@features/weekly-report/domain/weekly-report.entity"
+import { Scenario } from "@features/scenario/domain/scenario.entity"
+import { DialogueLine } from "@features/scenario/domain/dialogue-line.entity"
+import { ScenarioSession } from "@features/scenario/domain/scenario-session.entity"
+import { ScenarioLineResult } from "@features/scenario/domain/scenario-line-result.entity"
+import { BreathingExercise } from "@features/therapy/domain/breathing-exercise.entity"
+import { TherapyProgress } from "@features/therapy/domain/therapy-progress.entity"
+import { TherapySession } from "@features/therapy/domain/therapy-session.entity"
+import { TherapistClient } from "@features/therapy/domain/therapist-client.entity"
+import { TherapistAssignment } from "@features/therapy/domain/therapist-assignment.entity"
+import { OralMotorExercise } from "@features/therapy/domain/oral-motor-exercise.entity"
+import { ClinicalNorm } from "@features/therapy/domain/clinical-norm.entity"
+import { PhaseProgressionRule } from "@features/therapy/domain/phase-progression-rule.entity"
+import { ExportAuditLog } from "@features/research/domain/export-audit-log.entity"
+import { VoiceDiary } from "@features/voice-diary/domain/voice-diary.entity"
+import { DifficultyProfile } from "@features/difficulty/domain/difficulty-profile.entity"
+import { DifficultyDecision } from "@features/difficulty/domain/difficulty-decision.entity"
+import { FamilyLink } from "@features/family/domain/family-link.entity"
 import { configurations } from "@shared/infra/config/configurations"
 import { TypeOrmPinoLogger } from "@shared/infra/logging/typeorm-logger"
+import { SnakeNamingStrategy } from "./snake-naming-strategy"
 
 const dbConfig = configurations().database
 
@@ -46,6 +73,7 @@ export const AppDataSource = addTransactionalDataSource(
         database: dbConfig.database,
         synchronize: false,
         migrationsRun: true,
+        namingStrategy: new SnakeNamingStrategy(),
         logging: loggingOption,
         logger: new TypeOrmPinoLogger(),
         maxQueryExecutionTime: dbConfig.maxQueryExecutionTime > 0
@@ -73,6 +101,32 @@ export const AppDataSource = addTransactionalDataSource(
             UserBadge,
             GameConfig,
             GameConfigHistory,
+            PhonemeScore,
+            PronunciationErrorPattern,
+            UserErrorPattern,
+            MinimalPair,
+            DiscriminationSession,
+            SRSItem,
+            DeviceToken,
+            NotificationPreference,
+            WeeklyReport,
+            Scenario,
+            DialogueLine,
+            ScenarioSession,
+            ScenarioLineResult,
+            BreathingExercise,
+            TherapyProgress,
+            TherapySession,
+            TherapistClient,
+            TherapistAssignment,
+            OralMotorExercise,
+            ClinicalNorm,
+            PhaseProgressionRule,
+            ExportAuditLog,
+            VoiceDiary,
+            DifficultyProfile,
+            DifficultyDecision,
+            FamilyLink,
         ],
         migrations: [path.join(__dirname, "migrations", "*.{ts,js}")],
         subscribers: [],

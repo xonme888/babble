@@ -5,6 +5,8 @@ import { AssessmentRepository } from "../infrastructure/assessment.repository"
 import { AssessmentAnalysisService } from "../application/assessment-analysis.service"
 import { AnalysisResultProcessor } from "../application/analysis-result-processor"
 import type { AIAnalysisResult } from "../domain/ai-analysis-result.interface"
+import { VoiceDiaryService } from "@features/voice-diary/application/voice-diary.service"
+import { TherapyService } from "@features/therapy/application/therapy.service"
 import { ILogger } from "@shared/core/logger.interface"
 import { DI_TOKENS } from "@shared/core/di-tokens"
 import { IRedisService } from "@shared/core/redis-service.interface"
@@ -82,13 +84,77 @@ export const createAnalysisResultSubscriber = () => {
                 // 게스트 체험 결과는 assessmentId 없이 polling으로 처리됨 — 무시
                 if (typeof jobId === "string" && jobId.startsWith("guest-")) continue
 
+                // type 필드 기반 라우팅 (AI Worker가 전달) + jobId prefix 하위 호환
+                const resultType = result.type
+                const isVoiceDiary = resultType === "DIARY_ANALYSIS"
+                    || (typeof jobId === "string" && jobId.startsWith("voice-diary-"))
+                const isBreathing = resultType === "BREATHING_ASSESSMENT"
+                    || (typeof jobId === "string" && jobId.startsWith("breathing-"))
+
+                // 음성 일기 분석 결과 처리
+                if (isVoiceDiary) {
+                    const diaryId = assessmentId
+                        ?? (typeof jobId === "string" ? parseInt(jobId.replace("voice-diary-", ""), 10) : NaN)
+                    if (isNaN(diaryId)) {
+                        logger.warn(`[AnalysisSubscriber] Invalid voice-diary id: jobId=${jobId}`)
+                        continue
+                    }
+                    const parsed = JSON.parse(message)
+                    const diaryTraceId = parsed.traceId ?? `diary-result-${jobId}`
+                    await TraceContext.run(diaryTraceId, async () => {
+                        try {
+                            const voiceDiaryService = container.resolve(VoiceDiaryService)
+                            await voiceDiaryService.applyAnalysisResult(diaryId, {
+                                success: !!parsed.success,
+                                transcribedText: parsed.transcribed_text,
+                                speakingRate: parsed.speaking_rate,
+                                voiceQuality: parsed.voice_quality ?? undefined,
+                                message: parsed.message,
+                            })
+                        } catch (err: unknown) {
+                            logger.error(
+                                `[AnalysisSubscriber] Voice diary result processing failed: ${err instanceof Error ? err.message : String(err)}`
+                            )
+                        }
+                    })
+                    continue
+                }
+
+                // 호흡 운동 분석 결과 처리
+                if (isBreathing) {
+                    const exerciseId = assessmentId
+                        ?? (typeof jobId === "string" ? parseInt(jobId.replace("breathing-", ""), 10) : NaN)
+                    if (isNaN(exerciseId)) {
+                        logger.warn(`[AnalysisSubscriber] Invalid breathing id: jobId=${jobId}`)
+                        continue
+                    }
+                    const parsed = JSON.parse(message)
+                    const breathingTraceId = parsed.traceId ?? `breathing-result-${jobId}`
+                    await TraceContext.run(breathingTraceId, async () => {
+                        try {
+                            const therapyService = container.resolve(TherapyService)
+                            await therapyService.applyBreathingAnalysisResult(exerciseId, {
+                                success: !!parsed.success,
+                                breathing: parsed.breathing,
+                                message: parsed.message,
+                            })
+                        } catch (err: unknown) {
+                            logger.error(
+                                `[AnalysisSubscriber] Breathing result processing failed: ${err instanceof Error ? err.message : String(err)}`
+                            )
+                        }
+                    })
+                    continue
+                }
+
                 if (!jobId || !assessmentId) {
                     logger.warn(`[AnalysisSubscriber] Invalid message received: ${message}`)
                     continue
                 }
 
                 // 비즈니스 로직 처리 위임
-                await TraceContext.run(`analysis-result-${jobId}`, async () => {
+                const resultTraceId = result.traceId
+                await TraceContext.run(resultTraceId ?? `analysis-result-${jobId}`, async () => {
                     await processor.process(result)
 
                     // 자동 재시도 (인프라 관심사 -- Subscriber에서 처리)

@@ -37,4 +37,10 @@ export const RATE_LIMIT_POLICIES: Record<string, RateLimitPolicy> = {
     "gamification-read": { maxAttempts: 30, windowSeconds: 60 }, // 1분에 30회 (게임화 조회)
     "learning-record-read": { maxAttempts: 30, windowSeconds: 60 }, // 1분에 30회 (학습 기록 조회)
     "guest-token": GUEST_TOKEN_RATE_LIMIT,
+    "diary-upload": { maxAttempts: 10, windowSeconds: 60 }, // 1분에 10회 (음성 일기 업로드)
+    "diary-read": { maxAttempts: 30, windowSeconds: 60 }, // 1분에 30회 (음성 일기 조회)
+    "diary-analyze": { maxAttempts: 5, windowSeconds: 60 }, // 1분에 5회 (AI 분석 요청)
+    "family-read": { maxAttempts: 30, windowSeconds: 60 }, // 1분에 30회 (가족 조회)
+    "family-write": { maxAttempts: 10, windowSeconds: 60 }, // 1분에 10회 (가족 초대/연결)
+    "difficulty-read": { maxAttempts: 30, windowSeconds: 60 }, // 1분에 30회 (난이도 조회)
 }

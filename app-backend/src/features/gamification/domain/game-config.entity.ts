@@ -4,7 +4,7 @@ import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, Index } from 
  * GameConfig Entity
  * 게임/보상 규칙을 DB에 저장하여 배포 없이 어드민에서 실시간 튜닝 가능
  */
-@Entity("game_configs")
+@Entity("gmf_configs")
 @Index(["category"])
 // BaseAuditEntity 미상속: createdAt 없이 updatedAt만 사용하는 특수 구조
 export class GameConfig {

@@ -20,13 +20,13 @@ export enum AnalysisLogStatus {
  * - 성공/실패 추적
  * - 재시도 디버깅용
  */
-@Entity("assessment_analysis_logs")
+@Entity("asm_analysis_logs")
 export class AssessmentAnalysisLog extends BaseCreatedEntity {
     @Column()
     assessmentId: number
 
     @ManyToOne("Assessment", { onDelete: "CASCADE" })
-    @JoinColumn({ name: "assessmentId" })
+    @JoinColumn()
     assessment: Assessment
 
     @Column({

@@ -14,7 +14,7 @@ import type { User } from "@features/user/domain/user.entity"
  * UserBadge Entity
  * 사용자의 뱃지 해금 기록
  */
-@Entity("user_badges")
+@Entity("gmf_user_badges")
 @Index(["userId", "badgeId"], { unique: true })
 // BaseCreatedEntity 미상속: alias 날짜 컬럼(unlockedAt) 사용
 export class UserBadge {
@@ -31,14 +31,14 @@ export class UserBadge {
     userId: number
 
     @ManyToOne("User", { onDelete: "CASCADE" })
-    @JoinColumn({ name: "userId" })
+    @JoinColumn()
     user: User
 
     @Column()
     badgeId: number
 
     @ManyToOne("Badge", { onDelete: "RESTRICT" })
-    @JoinColumn({ name: "badgeId" })
+    @JoinColumn()
     badge: Badge
 
     /** 사용자 뱃지 해금 생성 팩토리 */

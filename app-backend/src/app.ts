@@ -14,6 +14,26 @@ import {
     getGameConfigClientRouter,
     getGameConfigAdminRouter,
 } from "@features/gamification/presentation/game-config.routes"
+import { getPhonemeRouter } from "@features/phoneme/presentation/phoneme.routes"
+import { getErrorPatternAdminRouter } from "@features/phoneme/presentation/error-pattern-admin.routes"
+import { getMinimalPairRouter } from "@features/phoneme/presentation/minimal-pair.routes"
+import { getMinimalPairAdminRouter } from "@features/phoneme/presentation/minimal-pair-admin.routes"
+import { getSrsRouter } from "@features/srs/presentation/srs.routes"
+import { getNotificationRouter } from "@features/notification/presentation/notification.routes"
+import { getWeeklyReportRouter } from "@features/weekly-report/presentation/weekly-report.routes"
+import { getAnalyticsAdminRouter } from "@features/analytics/presentation/analytics-admin.routes"
+import { getReportsAdminRouter } from "@features/weekly-report/presentation/reports-admin.routes"
+import { getScenarioAdminRouter } from "@features/scenario/presentation/scenario-admin.routes"
+import { getNotificationAdminRouter } from "@features/notification/presentation/notification-admin.routes"
+import { getErrorPatternRouter } from "@features/phoneme/presentation/error-pattern.routes"
+import { getDiscriminationRouter } from "@features/phoneme/presentation/discrimination.routes"
+import { getScenarioRouter } from "@features/scenario/presentation/scenario.routes"
+import { getTherapyRouter } from "@features/therapy/presentation/therapy.routes"
+import { getSlpDashboardRouter } from "@features/therapy/presentation/slp-dashboard.routes"
+import { getDifficultyRouter } from "@features/difficulty/presentation/difficulty.routes"
+import { getVoiceDiaryRouter } from "@features/voice-diary/presentation/voice-diary.routes"
+import { getFamilyRouter } from "@features/family/presentation/family.routes"
+import { getResearchAdminRouter } from "@features/research/presentation/research-admin.routes"
 import { globalErrorHandler } from "@shared/presentation/middlewares/error.handler"
 import { traceMiddleware } from "@shared/presentation/middlewares/trace.middleware"
 import { container } from "tsyringe"
@@ -258,6 +278,27 @@ export async function createApp() {
     app.use("/api/v1/gamification", getGamificationRouter())
     app.use("/api/v1/game-configs", getGameConfigClientRouter())
     app.use("/api/v1/admin/game-configs", getGameConfigAdminRouter())
+    app.use("/api/v1/phoneme-scores", getPhonemeRouter())
+    app.use("/api/v1/admin/error-patterns", getErrorPatternAdminRouter())
+    app.use("/api/v1/minimal-pairs", getMinimalPairRouter())
+    app.use("/api/v1/admin/minimal-pairs", getMinimalPairAdminRouter())
+    app.use("/api/v1/srs", getSrsRouter())
+    app.use("/api/v1/notifications", getNotificationRouter())
+    app.use("/api/v1/weekly-reports", getWeeklyReportRouter())
+    app.use("/api/v1/admin/analytics", getAnalyticsAdminRouter())
+    app.use("/api/v1/admin/reports", getReportsAdminRouter())
+    app.use("/api/v1", getScenarioRouter())
+    app.use("/api/v1/admin/scenarios", getScenarioAdminRouter())
+    app.use("/api/v1/admin/notifications", getNotificationAdminRouter())
+    app.use("/api/v1/therapy", getTherapyRouter())
+    app.use("/api/v1/therapy/discrimination-sessions", getDiscriminationRouter())
+    app.use("/api/v1/slp", getSlpDashboardRouter())
+    app.use("/api/v1/phonemes/error-patterns", getErrorPatternRouter())
+    app.use("/api/v1/phonemes/minimal-pairs", getMinimalPairRouter())
+    app.use("/api/v1/difficulty", getDifficultyRouter())
+    app.use("/api/v1/voice-diaries", getVoiceDiaryRouter())
+    app.use("/api/v1/family", getFamilyRouter())
+    app.use("/api/v1/admin/research", getResearchAdminRouter())
 
     // Bull Board 설정
     try {
@@ -278,11 +319,11 @@ export async function createApp() {
     // 6. Prometheus Metrics Endpoint (토큰 인증 또는 내부 네트워크만 접근 허용)
     const metricsToken = configService.config.metricsToken
     app.get("/metrics", async (req, res) => {
-        // 1차: 토큰 기반 인증 (Cloudflare Tunnel 등 프록시 환경 대응)
+        // 1차: Bearer 토큰 인증 (Prometheus authorization 호환)
         if (metricsToken) {
-            const requestToken =
-                req.headers["x-metrics-token"] as string | undefined
-            if (requestToken !== metricsToken) {
+            const auth = req.headers.authorization || ""
+            const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : ""
+            if (bearer !== metricsToken) {
                 return res.status(403).json({ message: "Forbidden" })
             }
         } else {
@@ -291,8 +332,10 @@ export async function createApp() {
             const isInternal =
                 ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(clientIP) ||
                 clientIP.startsWith("172.") ||
+                clientIP.startsWith("192.168.") ||
                 clientIP.startsWith("10.") ||
                 clientIP.startsWith("::ffff:172.") ||
+                clientIP.startsWith("::ffff:192.168.") ||
                 clientIP.startsWith("::ffff:10.")
 
             if (!isInternal) {

@@ -3,6 +3,7 @@ import { DataSource } from "typeorm"
 import { AssessmentRepository } from "../infrastructure/assessment.repository"
 import { AssessmentAnalysisLog, AnalysisLogStatus } from "../domain/assessment-analysis-log.entity"
 import { AssessmentStatus } from "../domain/assessment.entity"
+import { AssessmentOrigin } from "@shared/core/constants/api-contract"
 import type { AIAnalysisResult } from "../domain/ai-analysis-result.interface"
 import { ILogger } from "@shared/core/logger.interface"
 import { IRedisService } from "@shared/core/redis-service.interface"
@@ -39,12 +40,12 @@ export class AnalysisResultProcessor {
         this.logger.info(`[AnalysisProcessor] Received result for Assessment ${assessmentId}`, {
             success: result.success,
             score: result.score,
-            fa_score: result.fa_score,
-            phoneme_accuracy: result.phoneme_accuracy,
-            speaking_rate: result.speaking_rate,
-            has_alignment: !!result.alignment,
-            has_similarity: !!result.similarity,
-            has_pitch_data: !!result.pitch_data,
+            faScore: result.fa_score,
+            phonemeAccuracy: result.phoneme_accuracy,
+            speakingRate: result.speaking_rate,
+            hasAlignment: !!result.alignment,
+            hasSimilarity: !!result.similarity,
+            hasPitchData: !!result.pitch_data,
             message: result.success ? undefined : result.message,
         })
 
@@ -87,9 +88,9 @@ export class AnalysisResultProcessor {
         }
         assessment.clearDomainEvents()
 
-        // 번들 완료 판정 (성공 시에만, 실패해도 SSE 전송은 진행)
+        // 번들 완료 판정 — THERAPY origin은 bundle/chapter 진행 미업데이트
         let bundleCompletion = null
-        if (result.success && assessment.scriptId && assessment.userId) {
+        if (result.success && assessment.scriptId && assessment.userId && assessment.origin !== AssessmentOrigin.THERAPY) {
             try {
                 bundleCompletion = await this.chapterProgressService.checkBundleCompletion(
                     assessment.userId,
