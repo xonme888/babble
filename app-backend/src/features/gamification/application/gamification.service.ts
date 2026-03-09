@@ -4,6 +4,7 @@ import { XpTransactionRepository } from "../infrastructure/xp-transaction.reposi
 import { BadgeService } from "./badge.service"
 import type { ILearningRecordProvider } from "@features/learning/domain/learning-record-provider.interface"
 import { DateUtils } from "@shared/utils/date.utils"
+import { getOrFetch } from "@shared/utils/cache.utils"
 import { IRedisService } from "@shared/core/redis-service.interface"
 import { ILogger } from "@shared/core/logger.interface"
 import { DI_TOKENS } from "@shared/core/di-tokens"
@@ -38,40 +39,31 @@ export class GamificationService implements IGamificationProvider {
         longestStreak: number
         unlockedBadgeCount: number
     }> {
-        const cacheKey = GamificationRedisKeys.profile(userId)
+        return getOrFetch(
+            this.redisService,
+            this.logger,
+            GamificationRedisKeys.profile(userId),
+            GamificationCacheTTL.PROFILE,
+            async () => {
+                const [userLevel, weeklyXp, streak, unlockedBadges] = await Promise.all([
+                    this.userLevelRepository.findOrCreateByUserId(userId),
+                    this.getWeeklyXp(userId),
+                    this.learningRecordService.getStreak(userId),
+                    this.badgeService.getUnlockedBadges(userId),
+                ])
 
-        try {
-            const cached = await this.redisService.get(cacheKey)
-            if (cached) return JSON.parse(cached)
-        } catch (error) {
-            this.logger.warn("게임화 프로필 캐시 조회 실패, DB에서 조회", error)
-        }
-
-        const [userLevel, weeklyXp, streak, unlockedBadges] = await Promise.all([
-            this.userLevelRepository.findOrCreateByUserId(userId),
-            this.getWeeklyXp(userId),
-            this.learningRecordService.getStreak(userId),
-            this.badgeService.getUnlockedBadges(userId),
-        ])
-
-        const profile = {
-            level: userLevel.level,
-            totalXp: userLevel.totalXp,
-            xpToNextLevel: userLevel.xpToNextLevel,
-            levelProgress: Math.round(userLevel.levelProgress * 100) / 100,
-            weeklyXp,
-            currentStreak: streak.currentStreak,
-            longestStreak: streak.longestStreak,
-            unlockedBadgeCount: unlockedBadges.length,
-        }
-
-        try {
-            await this.redisService.set(cacheKey, JSON.stringify(profile), GamificationCacheTTL.PROFILE)
-        } catch (error) {
-            this.logger.warn("게임화 프로필 캐시 저장 실패", error)
-        }
-
-        return profile
+                return {
+                    level: userLevel.level,
+                    totalXp: userLevel.totalXp,
+                    xpToNextLevel: userLevel.xpToNextLevel,
+                    levelProgress: Math.round(userLevel.levelProgress * 100) / 100,
+                    weeklyXp,
+                    currentStreak: streak.currentStreak,
+                    longestStreak: streak.longestStreak,
+                    unlockedBadgeCount: unlockedBadges.length,
+                }
+            },
+        )
     }
 
     /**
@@ -102,36 +94,22 @@ export class GamificationService implements IGamificationProvider {
             totalXp: number
         }>
     > {
-        const cacheKey = GamificationRedisKeys.leaderboard(limit)
-
-        try {
-            const cached = await this.redisService.get(cacheKey)
-            if (cached) return JSON.parse(cached)
-        } catch (error) {
-            this.logger.warn("리더보드 캐시 조회 실패, DB에서 조회", error)
-        }
-
-        const topUsers = await this.userLevelRepository.getLeaderboard(limit)
-
-        const leaderboard = topUsers.map((ul, index) => ({
-            rank: index + 1,
-            userId: ul.userId,
-            firstName: ul.user?.firstName ?? "익명",
-            level: ul.level,
-            totalXp: ul.totalXp,
-        }))
-
-        try {
-            await this.redisService.set(
-                cacheKey,
-                JSON.stringify(leaderboard),
-                GamificationCacheTTL.LEADERBOARD
-            )
-        } catch (error) {
-            this.logger.warn("리더보드 캐시 저장 실패", error)
-        }
-
-        return leaderboard
+        return getOrFetch(
+            this.redisService,
+            this.logger,
+            GamificationRedisKeys.leaderboard(limit),
+            GamificationCacheTTL.LEADERBOARD,
+            async () => {
+                const topUsers = await this.userLevelRepository.getLeaderboard(limit)
+                return topUsers.map((ul, index) => ({
+                    rank: index + 1,
+                    userId: ul.userId,
+                    firstName: ul.user?.firstName ?? "익명",
+                    level: ul.level,
+                    totalXp: ul.totalXp,
+                }))
+            },
+        )
     }
 
     /**

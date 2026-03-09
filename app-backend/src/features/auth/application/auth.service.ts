@@ -234,7 +234,7 @@ export class AuthService {
         user.agreeToVoiceConsent(voiceConsentVersion)
         await this.userRepository.save(user)
         if (!user.voiceConsentAt) {
-            throw new Error("voiceConsentAt이 설정되지 않았습니다")
+            throw new ValidationException("auth.voice_consent_not_set", "VOICE_CONSENT_NOT_SET")
         }
         return user.voiceConsentAt
     }

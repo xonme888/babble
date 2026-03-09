@@ -10,7 +10,7 @@
 | **app-admin** | Next.js 16, React 19, TypeScript | X |
 | **app-infrastructure** | Docker Compose, Nginx, PostgreSQL 15, Redis 7 | X |
 | **app-mobile** | Flutter 3.3+, Dart, Provider | X |
-| **app-ai** | Python 3.12, FastAPI, OpenAI Whisper | X |
+| **app-ai** | Python 3.12, Redis Worker, faster-whisper | X |
 
 > **소스 코드 공개 범위**: 백엔드의 핵심 설계를 보여주는 3개 모듈(auth, assessment, gamification)과 공통 아키텍처(shared)만 공개합니다. 나머지 모듈과 서비스는 보안 및 운영상의 이유로 비공개입니다.
 
@@ -52,7 +52,7 @@
   <img src="images/IMG_2400.png" width="200" />
 </p>
 
-스크립트를 따라 읽고 녹음하면 AI가 발음을 분석한다. 녹음 완료 후 소요 시간이 표시되고, 재녹음 또는 제출을 선택할 수 있다. 음성은 BullMQ를 통해 AI 서비스(FastAPI + Whisper)로 전달되고, 분석 결과가 SSE로 실시간 전송된다.
+스크립트를 따라 읽고 녹음하면 AI가 발음을 분석한다. 녹음 완료 후 소요 시간이 표시되고, 재녹음 또는 제출을 선택할 수 있다. 음성은 BullMQ를 통해 AI 서비스(Redis Worker + faster-whisper)로 전달되고, 분석 결과가 SSE로 실시간 전송된다.
 
 ### 학습 결과
 
@@ -90,7 +90,7 @@ flowchart LR
     Nginx["Nginx\nReverse Proxy"]
     API["Backend API\n(Express 5)"]
     Worker["Email Worker\n(BullMQ)"]
-    AI["AI Service\n(FastAPI + Whisper)"]
+    AI["AI Service\n(Redis Worker)"]
     PG[(PostgreSQL)]
     Redis[(Redis)]
     CF["Cloudflare Tunnel"]
@@ -189,7 +189,7 @@ flowchart TB
 | API Docs | swagger-ui-express | OpenAPI 3.0 자동 문서화 |
 | Admin | Next.js 16 + React 19 | SSR, App Router, next-intl (i18n) |
 | Mobile | Flutter 3.3+ | 크로스플랫폼, Provider 상태 관리 |
-| AI | FastAPI + Whisper | 음성 STT + 발음 분석 |
+| AI | Redis Worker + faster-whisper | 음성 STT + 발음 분석 |
 | Infra | Docker Compose + Nginx | 컨테이너 오케스트레이션, 리버스 프록시 |
 | Tunnel | Cloudflare Tunnel | 인바운드 포트 없이 HTTPS 서비스 |
 
