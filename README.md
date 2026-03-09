@@ -215,11 +215,11 @@ Token 상태 판단:
 
 ### BullMQ + Redis 큐 — AI 분석 비동기 처리
 
-발음 분석은 AI 서비스에서 3~10초 걸린다. 동기로 처리하면 API 응답이 블로킹되니까 BullMQ로 Job을 큐에 넣고 즉시 202 응답을 보낸다. AI Worker가 Redis에서 Job을 polling해서 처리하고, 결과를 Redis Pub/Sub로 publish한다. Backend가 구독 중이던 채널에서 결과를 받아 SSE로 클라이언트에 전송한다.
+발음 분석은 AI 서비스에서 3~10초 걸린다. 동기로 처리하면 API 응답이 블로킹되니까 BullMQ로 Job을 큐에 넣고 즉시 202 응답을 보낸다. BullMQ Worker가 Job을 수신하면 AnalysisType(SCRIPT/WORD/BREATHING/FREE_SPEECH)에 따라 taskType을 결정하고, Redis 리스트(`ai:tasks`)에 push한다. Python AI Worker가 BLPOP으로 task를 가져와 처리하고, 결과를 `ai:results:completed` 리스트에 push한다. Backend의 Subscriber가 BLPOP으로 결과를 수신하여 타입별로 라우팅(Assessment/VoiceDiary/Therapy)한 뒤 SSE로 클라이언트에 전송한다.
 
-게스트 사용자는 `guest-{deviceId}` 형태의 jobId를 쓰고, 일반 사용자는 UUID를 쓴다. 게스트는 SSE 구독 없이 polling으로 결과를 확인한다.
+게스트 사용자는 `guest-{deviceId}` 형태의 jobId를 쓰고, Subscriber에서 skip된다(polling 방식으로 결과 확인). 일반 사용자는 `assessment-{id}-{retryCount}` 형태의 jobId를 쓴다.
 
-실패 시 최대 3회 재시도하고, 3회 초과하면 `MAX_RETRY_EXCEEDED` 상태로 전환된다.
+실패 시 자동 재시도(delay 후 재큐잉)하고, `retryCount`가 3회에 도달하면 `MAX_RETRY_EXCEEDED` 상태로 전환된다. 처리 실패한 메시지는 Dead Letter Queue(`ai:analysis:dead-letter`)에 보존된다.
 
 ### SSE — WebSocket 대신 선택한 이유
 
@@ -302,11 +302,11 @@ erDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING : 음성 업로드
-    PENDING --> ANALYZING : Worker가 Job 시작
-    ANALYZING --> COMPLETED : 분석 성공
-    ANALYZING --> FAILED : 분석 실패
-    FAILED --> ANALYZING : 재시도 (최대 3회)
-    FAILED --> MAX_RETRY_EXCEEDED : 3회 초과
+    PENDING --> ANALYZING : Worker가 startAnalysis()
+    ANALYZING --> COMPLETED : 분석 성공 (applyAnalysisResult)
+    ANALYZING --> FAILED : 분석 실패 (failAnalysis)
+    FAILED --> PENDING : 자동 재시도 (delay 후 재큐잉)
+    FAILED --> MAX_RETRY_EXCEEDED : retryCount >= 3
 ```
 
 ### AI 분석 확장
@@ -419,26 +419,56 @@ AI 서비스와의 경계에서 snake_case(Redis/AI) ↔ camelCase(Domain)를 `t
 sequenceDiagram
     participant App as Mobile App
     participant API as Backend API
-    participant Q as BullMQ (Redis)
-    participant AI as AI Worker
+    participant BullMQ as BullMQ Worker
+    participant Redis as Redis
+    participant AI as AI Worker (Python)
     participant SSE as SSE Channel
 
-    App->>API: POST /assessments (audio file)
-    API->>API: Assessment 생성 (PENDING)
-    API->>Q: 분석 Job 추가
+    App->>API: POST /assessments (audio file + assessmentType)
+    API->>API: Assessment 생성 (PENDING, origin 설정)
+    API->>BullMQ: 분석 Job 추가 (AnalysisType 라우팅)
     API-->>App: 202 Accepted + assessmentId
 
     App->>SSE: GET /assessments/notifications/sse
     Note over App,SSE: SSE 연결 유지
 
-    Q->>AI: Job polling
-    AI->>AI: Whisper STT + 발음 분석
-    AI->>Q: 결과 publish (Redis Pub/Sub)
+    BullMQ->>BullMQ: Job 수신, AnalysisType별 taskType 결정
+    BullMQ->>BullMQ: Assessment 상태 → ANALYZING
+    BullMQ->>Redis: RPUSH ai:tasks (taskType + audioUrl)
 
-    Q->>API: 결과 수신 (subscribe)
-    API->>API: Assessment 업데이트 (COMPLETED)
-    API->>SSE: 분석 완료 이벤트 전송
-    SSE-->>App: score, feedback, pitchData
+    AI->>Redis: BLPOP ai:tasks
+    AI->>AI: Whisper STT + 다차원 분석
+    AI->>Redis: RPUSH ai:results:completed
+
+    Redis->>API: Subscriber BLPOP ai:results:completed
+    API->>API: 타입별 라우팅 (Assessment/VoiceDiary/Therapy)
+    API->>API: Assessment 업데이트 (COMPLETED) + AnalysisLog 저장
+    API->>API: Bundle 완료 체크 (THERAPY origin은 skip)
+    API->>Redis: PUBLISH sse:assessment:updated
+    Redis->>SSE: 분석 완료 이벤트 전송
+    SSE-->>App: score, feedback, fluency, voiceQuality, pitchData
+```
+
+### 분석 타입별 라우팅
+
+```mermaid
+flowchart LR
+    Upload["음성 업로드"]
+    Upload --> TypeCheck{assessmentType?}
+    TypeCheck -->|WORD_PRACTICE| WORD["WORD → WORD_PRACTICE"]
+    TypeCheck -->|기타 + script 있음| SCRIPT["SCRIPT → ASSESSMENT"]
+    TypeCheck -->|기타 + script 없음| FREE["FREE_SPEECH → DIARY_ANALYSIS"]
+    TypeCheck -->|호흡 운동| BREATH["BREATHING → BREATHING_ASSESSMENT"]
+
+    WORD --> AI["AI Worker"]
+    SCRIPT --> AI
+    FREE --> AI
+    BREATH --> AI
+
+    AI --> ResultRoute{결과 타입?}
+    ResultRoute -->|ASSESSMENT/WORD| Processor["AnalysisResultProcessor"]
+    ResultRoute -->|DIARY_ANALYSIS| Diary["VoiceDiaryService"]
+    ResultRoute -->|BREATHING| Therapy["TherapyService"]
 ```
 
 ---
