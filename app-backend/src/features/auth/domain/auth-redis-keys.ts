@@ -22,4 +22,4 @@ export const AuthRedisKeys = {
 } as const
 
 /** 지원하는 클라이언트 타입 목록 */
-export const CLIENT_TYPES: readonly ClientType[] = ["mobile", "admin"] as const
+export const CLIENT_TYPES: readonly ClientType[] = ["mobile", "admin", "therapy"] as const
