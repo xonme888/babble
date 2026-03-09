@@ -570,7 +570,7 @@ app-backend/src/
 │   │   ├── application/        # AuthService, LoginStrategy, TokenRotation
 │   │   ├── domain/             # TokenRefreshPolicy, ClientType, VerificationCode
 │   │   ├── infrastructure/     # JwtTokenProvider, BcryptPasswordHasher
-│   │   └── presentation/       # Routes, Guards (auth/admin/guest/clientAccess)
+│   │   └── presentation/       # Routes, Guards (auth/admin/guest/voiceConsent/clientAccess)
 │   ├── assessment/             # 발음 평가 (업로드, AI 분석, 결과) ★ 공개
 │   │   ├── domain/             # Assessment(asm_), AI 분석 인터페이스, AnalysisLog
 │   │   ├── application/        # AnalysisResultProcessor, AnalysisService
@@ -628,7 +628,7 @@ Backend 실행 후 `http://localhost:3000/api-docs` (Swagger UI, 개발 환경 �
 | app-admin | X | Next.js 16 기반 관리자 대시보드 |
 | app-infrastructure | X | Docker Compose, Nginx, 모니터링 설정 |
 | app-mobile | X | Flutter 3.3+ 기반, 이 README에 아키텍처 요약 포함 |
-| app-ai | X | FastAPI + Whisper 기반, BullMQ Worker 패턴 |
+| app-ai | X | Redis BLPOP Worker + faster-whisper 기반 음성 분석 |
 
 **공개 모듈 선정 기준**:
 
