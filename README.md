@@ -59,6 +59,7 @@
 <p align="center">
   <img src="images/IMG_2401.png" width="200" />
   <img src="images/IMG_2402.png" width="200" />
+  <img src="images/IMG_2463.PNG" width="200" />
 </p>
 
 **뱃지 해금** — 발음 진단 80점 이상 달성 시 뱃지가 해금된다. 15개 뱃지가 DB에 정의되어 있고, 조건 충족 시 Domain Event로 자동 수여된다. **상세 분석** — 단어별 정확/부정확/누락/추가 판정, 억양(Pitch) 그래프, 말하기 속도(SPM) 등 AI 분석 결과를 시각적으로 제공한다.
